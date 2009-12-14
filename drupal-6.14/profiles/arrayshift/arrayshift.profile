@@ -100,7 +100,7 @@ function arrayshift_profile_tasks(&$task, $url) {
   // permissions for the default user roles. The arrayshift_exports module handles
   // the tweaky stuff like making vocabularies and so on.
  
-  install_include(as_profile_modules());
+  install_include(arrayshift_profile_modules());
  
   $types = array(
     array(
