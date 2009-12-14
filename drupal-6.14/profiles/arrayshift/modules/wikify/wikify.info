@@ -1,0 +1,11 @@
+; $Id: wikify.info,v 1.1.2.1 2009/12/08 01:33:52 eaton Exp $
+name = Wikify
+description = Allows users to mark content as publically editable.
+core = 6.x
+
+; Information added by drupal.org packaging script on 2009-12-11
+version = "6.x-1.0"
+core = "6.x"
+project = "wikify"
+datestamp = "1260492671"
+

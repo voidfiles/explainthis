@@ -1,0 +1,305 @@
+<?php
+// $Id: wikify.module,v 1.1.2.1 2009/12/08 01:33:52 eaton Exp $
+
+/**
+ * @file
+ * A tremendously simple access control module -- it allows users to mark
+ * individual nodes as publically editable; users with the 'edit wikified content'
+ * permission can edit these nodes, while others cannot.
+ */
+
+define('WIKIFY_DISABLED', 0);
+define('WIKIFY_ALLOWED', 1);
+define('WIKIFY_AUTOMATIC', 2);
+define('WIKIFY_ALWAYS', 3);
+
+/**
+ * Implementation of hook_enable().
+ *
+ * A node access module needs to force a rebuild of the node access table
+ * when it is enabled to ensure that things are set up.
+ */
+function wikify_enable() {
+  node_access_rebuild(TRUE);
+}
+
+/**
+ * Implementation of hook_disable().
+ *
+ * A node access module needs to force a rebuild of the node access table
+ * when it is disabled to ensure that its entries are removed from the table.
+ */
+function wikify_disable() {
+  wikify_disabling(TRUE);
+  node_access_rebuild(TRUE);
+}
+
+/**
+ * Simple function to make sure we don't respond with grants when disabling
+ * ourselves.
+ */
+function wikify_disabling($set = NULL) {
+  static $disabling = FALSE;
+  if ($set !== NULL) {
+    $disabling = $set;
+  }
+  return $disabling;
+}
+
+/**
+ * Implementation of hook_perm().
+ *
+ * In this example, we will use a simple permission to determine whether a user
+ * has access to "wikify" content. This permission is defined here.
+ */
+function wikify_perm() {
+  return array('mark content as wikify', 'edit wikified content');
+}
+
+/**
+ * Implementation of hook_node_grants().
+ *
+ * Tell the node access system what GIDs the user belongs to for each realm.
+ * In this example, we are providing two realms: the example realm, which
+ * has just one group id (1) and the user is either a member or not depending
+ * upon the operation and the access permission set.
+ *
+ * We are also setting up a realm for the node author, though, to give it
+ * special privileges. That has 1 GID for every UID, and each user is
+ * automatically a member of the group where GID == UID.
+ *
+ */
+function wikify_node_grants($account, $op) {
+  if ($op == 'view') {
+    $grants['wikify'] = array(1);
+  }
+
+  if (($op == 'update') && user_access('edit wikified content', $account)) {
+    $grants['wikify'] = array(1);
+  }
+
+  $grants['wikify_author'] = array($account->uid);
+  return $grants;
+}
+
+/**
+ * Implementation of hook_node_access_records().
+ *
+ * All node access modules must implement this hook. If the module is
+ * interested in the privacy of the node passed in, return a list
+ * of node access values for each grant ID we offer. Since this
+ * example module only offers 1 grant ID, we will only ever be
+ * returning one record.
+ */
+function wikify_node_access_records($node) {
+  if (wikify_disabling()) {
+    return;
+  }
+
+  // We only care about the node if it's been marked wikify. If not, it is
+  // treated just like any other node and we completely ignore it.
+  if ($node->wikify) {
+    $grants = array();
+    $grants[] = array(
+      'realm' => 'wikify',
+      'gid' => TRUE,
+      'grant_view' => TRUE,
+      'grant_update' => FALSE,
+      'grant_delete' => FALSE,
+      'priority' => 0,
+    );
+
+    // For the example_author array, the GID is equivalent to a UID, which
+    // means there are many many groups of just 1 user.
+    $grants[] = array(
+      'realm' => 'wikify_author',
+      'gid' => $node->uid,
+      'grant_view' => TRUE,
+      'grant_update' => TRUE,
+      'grant_delete' => TRUE,
+      'priority' => 0,
+    );
+    return $grants;
+  }
+}
+
+/**
+ * Implementation of hook_form_alter()
+ *
+ * This module adds a simple checkbox to the node form labeled wikify. If the
+ * checkbox is labelled, only the node author and users with 'access wikify content'
+ * privileges may see it.
+ */
+function wikify_form_alter(&$form, $form_state, $form_id) {
+  if ($form['#id'] == 'node-form') {
+    $node = $form['#node'];
+    $default = variable_get('wikify_'. $node->type, WIKIFY_ALLOWED);
+
+    if ($default != WIKIFY_DISABLED || !empty($node->privacy)) {
+      if (empty($node->nid)) {
+        $wikistate = ($default > WIKIFY_ALLOWED);
+      }
+      else {
+        $wikistate = $node->wikify;
+      }
+
+      if (user_access('mark content as wikify') && $default != WIKIFY_ALWAYS) {
+        $form['wikify'] = array(
+          '#type' => 'checkbox',
+          '#title' => t('Publically editable'),
+          '#return_value' => 1,
+          '#default_value' => $wikistate,
+        );
+      }
+      else {
+        $form['wikify'] = array(
+          '#type' => 'value',
+          '#value' => $wikistate,
+        );
+      }
+    }
+  }
+  elseif($form_id == 'node_type_form') {
+    $node_type = (array)$form['#node_type'];
+    $type = $node_type['type'];
+    $form['workflow']['wikify'] = array(
+      '#type' => 'radios',
+      '#title' => t('Privacy'),
+      '#options' => array(
+        WIKIFY_DISABLED => t('Disabled (never wikified)'),
+        WIKIFY_ALLOWED => t('Enabled (non-wikified by default)'),
+        WIKIFY_AUTOMATIC => t('Enabled (wikified by default)'),
+        WIKIFY_ALWAYS => t('Hidden (always wikified)'),
+      ),
+      '#default_value' => variable_get('wikify_'. $type, WIKIFY_ALLOWED),
+    );
+  }
+}
+
+/**
+ * Implementation of hook_nodeapi().
+ *
+ * - "delete", "insert", and "update":
+ * The module must track the access status of the node.
+ */
+function wikify_nodeapi(&$node, $op, $arg = 0) {
+  switch ($op) {
+    case 'load':
+      $result = db_fetch_object(db_query('SELECT * FROM {wikify} WHERE nid = %d', $node->nid));
+      $node->wikify = $result->wikify;
+      break;
+    case 'delete':
+      db_query('DELETE FROM {wikify} WHERE nid = %d', $node->nid);
+      break;
+    case 'insert':
+    case 'update':
+      db_query('UPDATE {wikify} SET wikify = %d WHERE nid = %d', $node->wikify, $node->nid);
+      if (!db_affected_rows()) {
+        db_query('INSERT INTO {wikify} (nid, wikify) VALUES (%d, %d)', $node->nid, $node->wikify);
+      }
+      break;
+  }
+}
+
+function wikify_link($type, $node = NULL, $teaser = FALSE) {
+  if ($type == 'node' && $node->wikify) {
+    $links['wikify_icon']['title'] = t('This content is publically editable.');
+    return $links;
+  }
+}
+
+
+/**
+ * Implementation of hook_action_info().
+ */
+function wikify_action_info() {
+  return array(
+    'wikify_set_wikify_action' => array(
+      'type' => 'node',
+      'description' => t('Wikify post'),
+      'configurable' => FALSE,
+      'hooks' => array(
+        'nodeapi' => array('insert', 'update'),
+      ),
+    ),
+    'wikify_set_public_action' => array(
+      'type' => 'node',
+      'description' => t('Unwikify post'),
+      'configurable' => FALSE,
+      'hooks' => array(
+        'nodeapi' => array('insert', 'update'),
+      ),
+    ),
+  );
+}
+
+
+/**
+ * Implementation of a Drupal action.
+ */
+function wikify_set_public_action(&$node, $context = array()) {
+  $node->wikify = FALSE;
+  $nids = array($node->nid);
+  wikify_node_mark_unwikified($nids);
+}
+
+
+/**
+ * Implementation of a Drupal action.
+ */
+function wikify_set_wikify_action(&$node, $context = array()) {
+  $node->wikify = TRUE;
+  $nids = array($node->nid);
+  wikify_node_mark_wikify($nids);
+}
+
+/**
+ * Implementation of hook_node_operations().
+ */
+function wikify_node_operations() {
+  $operations = array(
+    'wikify_mark_as_wikify' => array(
+      'label' => t('Mark as wikify'),
+      'callback' => 'wikify_node_mark_wikify',
+    ),
+    'wikify_mark_as_public' => array(
+      'label' => t('Mark as public'),
+      'callback' => 'wikify_node_mark_unwikified',
+    ),
+  );
+  return $operations;
+}
+
+/**
+ * Callback for 'Mark as wikify' node operation
+ */
+function wikify_node_mark_wikify($nids) {
+  foreach ($nids as $nid) {
+    db_query('UPDATE {wikify} SET wikify = %d WHERE nid = %d', 1, $nid);
+    if (!db_affected_rows()) {
+      db_query('INSERT INTO {wikify} (nid, wikify) VALUES (%d, %d)', $nid, 1);
+    }
+  }
+}
+
+/**
+ * Callback for 'Mark as public' node operation
+ */
+function wikify_node_mark_unwikified($nids) {
+  foreach ($nids as $nid) {
+    db_query('UPDATE {wikify} SET wikify = %d WHERE nid = %d', 0, $nid);
+    if (!db_affected_rows()) {
+      db_query('INSERT INTO {wikify} (nid, wikify) VALUES (%d, %d)', $nid, 0);
+    }
+  }
+}
+
+/**
+ * Tell Views that we're down with it, yo.
+ */
+function wikify_views_api() {
+  return array(
+    'api' => 2,
+    'path' => drupal_get_path('module', 'wikify'),
+  );
+}

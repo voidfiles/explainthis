@@ -1,0 +1,22 @@
+<?php
+// $Id: wikify.install,v 1.1.2.1 2009/12/08 01:33:52 eaton Exp $
+
+function wikify_schema() {
+  $schema['wikify'] = array(
+    'fields' => array(
+      'nid'     => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0),
+      'wikify' => array('type' => 'int', 'not null' => TRUE, 'default' => 0),
+    ),
+    'primary key' => array('nid'),
+  );
+  
+  return $schema;
+}
+
+function wikify_install() {
+  drupal_install_schema('wikify');
+}
+
+function wikify_uninstall() {
+  drupal_uninstall_schema('wikify');
+}

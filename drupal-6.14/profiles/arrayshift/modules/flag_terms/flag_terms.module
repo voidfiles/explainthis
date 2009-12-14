@@ -1,0 +1,61 @@
+<?php
+// $Id: flag_terms.module,v 1.2 2009/11/19 13:09:02 tayzlor Exp $
+/**
+ * @file
+ * Flag Terms.
+ * Written by Graham Taylor.
+ */
+
+module_load_include('inc', 'flag_terms', 'flag_terms');
+
+/**
+ * Implementation of hook_flag_definitions().
+ */
+function flag_terms_flag_definitions() {
+  return array(
+    'term' => array(
+      'title' => t('Taxonomy terms'),
+      'description' => t('Taxonomy terms are used to classify content.'),
+      'handler' => 'flag_term',
+    ),
+  );
+}
+
+/**
+ * Implementation of template_preprocess_page().
+ */
+function flag_terms_preprocess_page(&$variables) {
+  if (in_array('page-taxonomy-term', $variables['template_files'])) {
+    $term = explode('-', $variables['template_files'][2]);
+    $tid = $term[3];
+    if (is_numeric($tid)) {
+      $variables = theme('flag_terms_flags', $tid, $variables);
+    }
+  }
+}
+
+/**
+ * Implementation of hook_theme()
+ */
+function flag_terms_theme() {
+  return array(
+    'flag_terms_flags' => array(
+      'arguments' => array('tid' => NULL, 'variables' => NULL),
+    ),
+  );
+}
+
+/**
+ * Theme function to inject flag links into taxonony/term/% pages.
+ */
+function theme_flag_terms_flags($tid, $variables) {
+  $links = array();
+  foreach (flag_get_flags('term') as $flag) {
+    if ($flag->show_on_term_page != 0) {
+      $links[] = flag_create_link($flag->name, $tid);
+    }
+  }
+  $variables['content'] = join('', $links) . $variables['content']; 	
+  
+  return $variables;
+}

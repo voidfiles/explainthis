@@ -1,0 +1,139 @@
+<?php
+
+function as_tweaks_init() {
+  // We call this in wrongness. Evil and wicked. Be afraid.
+  switch (variable_get('as_install_stage', 0)) {
+    case 0:
+      variable_set('as_install_stage', 1);
+
+    case 1:
+      variable_set('as_install_stage', 2);
+      break;
+
+    case 2:
+      install_include(array('block', 'menu'));
+
+      userpoints_get_vid();
+
+      install_set_block('arrayshift', 'right', 'views', 'as_tags-block_1', 0);
+      install_set_block('arrayshift', 'right', 'similarterms', 1, 1);
+
+      install_menu_create_menu_item('questions', t('Questions'), '', 'primary-links', NULL, 0);
+      install_menu_create_menu_item('tags', t('Tags'), '', 'primary-links', NULL, 1);
+      install_menu_create_menu_item('users', t('Users'), '', 'primary-links', NULL, 2);
+      install_menu_create_menu_item('unanswered', t('Unanswered'), '', 'primary-links', NULL, 3);
+      variable_set('as_install_stage', 3);
+      break;
+  }
+}
+
+// Remove some unneeded bits from the node type form.
+function as_tweaks_form_alter(&$form, &$form_state, &$form_id) {
+  if (isset($form['#node'])) {
+    unset($form['body_field']['body']['#title']);
+    $form['body_field']['body']['#rows'] = 15;
+    $form['title']['#description'] = t("What's your programming question? Be descriptive.");
+    $form['taxonomy']['#weight'] = 10;
+  }
+}
+
+// Allow term names to be used as a filter.
+function as_tweaks_views_data_alter(&$views_data) {
+  // Tweak the taxonomy name field to allow filtering and exposed filtering.
+  $views_data['term_data']['name']['filter'] = array(
+    'handler' => 'views_handler_filter_string',
+  );
+}
+
+// Term path handling. Could use taxonomy_redirect, but this is easier.
+function as_tweaks_term_path($term) {
+  $t = taxonomy_get_term($term->tid);
+  $term->name = $t->name;
+  return 'questions/taggged/' . urlencode($term->name);
+}
+
+/**
+ * Below, a bunch of simple hook implementations that award userpoints based
+ * on various events that happen. In theory, Rules module and various other tools
+ * could be used to do these things, but most of those modules don't have easy
+ * to export/import configuration data.
+ */
+
+// VotingAPI hook. When a user casts a vote on a node, the author should
+// get/lose points..
+function as_tweaks_votingapi_insert($votes) {
+  foreach ($votes as $vote) {
+    if ($vote['content_type'] == 'node' && ($node = node_load($vote['content_id']))) {
+      // Award the points
+      userpoints_userpointsapi(array(
+        'uid'         => $node->uid,
+        'points'      => $vote['value'] * 10,
+        'operation'   => 'vote up',
+        'entity_id'   => $node->nid,
+        'entity_type' => 'node',
+      ));
+    }
+  }
+}
+
+// VotingAPI hook. When a user casts a vote on a node, the author should
+// get/lose points..
+function as_tweaks_votingapi_delete($votes) {
+  foreach ($votes as $vote) {
+    if ($vote['content_type'] == 'node' && ($node = node_load($vote['content_id']))) {
+      // Award the points
+      userpoints_userpointsapi(array(
+        'uid'         => $node->uid,
+        'points'      => $vote['value'] * -10,
+        'operation'   => 'vote up',
+        'entity_id'   => $node->nid,
+        'entity_type' => 'node',
+      ));
+    }
+  }
+}
+
+// NodeAPI hook. When a user posts their 1st, 10th, 100th, and 1000th questions
+// or answers, they get points.
+function as_tweaks_nodeapi(&$node, $op) {
+  if ($op == 'insert') {
+    if (($node->type == 'comment') || ($node->type == 'question')) {
+      $count = db_result(db_query("SELECT count(1) FROM {node} WHERE uid = %d AND type = %d", $node->uid, $node->type));
+      if (in_array($count, array(1, 10, 100, 1000))) {
+        userpoints_userpointsapi(array(
+          'uid'         => $node->uid,
+          'points'      => $count,
+          'operation'   => 'participation',
+          'entity_id'   => $node->nid,
+          'entity_type' => 'node',
+        ));
+      }
+    }
+  }
+}
+
+// Flag hook. When a user favorites a node the author should get userpoints.
+// When a node gets flagged as offensive the user should lose points, and it
+// should be unpublished at 10 flags.
+// When a node is marked as wikified, the wikify flag should be flipped.
+function as_tweaks_flag($action, $flag, $content_id, $account) {
+  if ($action == 'wikify') {
+    ($action == 'flag') ? wikify_node_mark_wikify(array($content_id)) : wikify_node_mark_unwikify(array($content_id));
+  }
+  elseif ($flag->name = 'favorite') {
+    $points = ($action == 'flag') ? 100 : -100;
+  }
+  elseif ($action == 'offensive') {
+    $points = ($action == 'flag') ? -100 : 100;
+  }
+
+  if (isset($points) && $node = node_load($content_id)) {
+    userpoints_userpointsapi(array(
+      'uid'         => $node->uid,
+      'points'      => $points,
+      'operation'   => $flag->name,
+      'entity_id'   => $node->nid,
+      'entity_type' => 'node',
+    ));
+  }
+}

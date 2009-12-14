@@ -1,0 +1,15 @@
+<?php
+// $Id: as_exports.install,v 1.1.2.1 2009/12/10 23:17:53 eaton Exp $
+
+function as_exports_install() {
+  install_include(array('taxonomy'));
+  // Set up the taxonomy vocabulary that will be required by the exports.
+  $tags_vid = install_taxonomy_add_vocabulary(t('Tags'), array('question' => 'question'),
+    array(
+     'tags' => 1,
+     'multiple' => 1,
+     'required' => 1,
+     'module' => 'as_tweaks',
+  ));
+  variable_set('as_exports_vid', $tags_vid);
+}

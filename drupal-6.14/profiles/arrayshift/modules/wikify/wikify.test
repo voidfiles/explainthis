@@ -1,0 +1,36 @@
+<?php
+// $Id: wikify.test,v 1.1.2.1 2009/12/08 01:33:52 eaton Exp $
+
+/**
+ * @file
+ * Simple test case for the Wikify module. Ensures that the API for controlling
+ * editability for standalone nodes works, but does not yet exercise all possible
+ * permutations of the node editing form.
+ *
+ * Note: This file is totally unfinished and doesn't do anything yet. Psych!
+ */
+
+class WikifyTestCase extends DrupalWebTestCase {
+  /**
+   * Implementation of getInfo().
+   */
+  public static function getInfo() {
+    return array(
+      'name' => t('Wikify functionality'),
+      'description' => t('Toggle the Wikify flag for a node, and attempt to edit the node as another user.'),
+      'group' => t('Wikify'),
+    );
+  }
+
+  /**
+   * Implementation of setUp().
+   */
+  function setUp() {
+    parent::setUp();
+
+    // Create and login user
+    $admin_user = $this->drupalCreateUser(array('administer nodes'));
+    $this->drupalLogin($admin_user);
+  }
+}
+

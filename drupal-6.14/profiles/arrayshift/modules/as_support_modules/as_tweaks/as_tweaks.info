@@ -1,0 +1,12 @@
+; $Id: as_tweaks.info,v 1.1.2.1 2009/12/10 23:17:53 eaton Exp $
+
+name = ArrayShift Tweaks
+description = Tweaks for the ArrayShift web site
+core = 6.x
+
+; Information added by drupal.org packaging script on 2009-12-10
+version = "6.x-1.0-beta1"
+core = "6.x"
+project = "as_support_modules"
+datestamp = "1260489305"
+
