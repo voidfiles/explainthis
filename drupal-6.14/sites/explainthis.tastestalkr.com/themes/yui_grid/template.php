@@ -30,3 +30,23 @@ if (is_null(theme_get_setting('yui_page_width'))) {
   // Force refresh of Drupal internals.
   theme_get_setting('', TRUE);
 }
+
+
+function hook_form_node_alter(&$form, $form_state, $form_id){
+    print "made it to the form";
+
+    var_dump($form_state);
+
+}
+
+function ago($timestamp){
+   $difference = time() - $timestamp;
+   $periods = array("second", "minute", "hour", "day", "week", "month", "years", "decade");
+   $lengths = array("60","60","24","7","4.35","12","10");
+   for($j = 0; $difference >= $lengths[$j]; $j++)
+   $difference /= $lengths[$j];
+   $difference = round($difference);
+   if($difference != 1) $periods[$j].= "s";
+   $text = "$difference $periods[$j] ago";
+   return $text;
+}

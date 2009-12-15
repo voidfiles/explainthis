@@ -35,15 +35,15 @@
         <div>views</div>
       </div>
       <div class="summary">
-        <div class="s5"><?php $field = $fields["title"]; echo $field->content; ?></div>
-        <div class="tags"><div class="item-list"><ul><li class="first"><a href="/questions/tagged/coder%2Bcome-on">coder come-on</a></li>
-    <li><a href="/questions/tagged/sexy">sexy</a></li>
-    <li class="last"><a href="/questions/tagged/show%2Bme%2Bthe%2Bcode">show me the code</a></li>
-    </ul></div></div>
+        <div class="s5"><?php echo $fields["title"]->content; ?></div>
+        
+        <div class="tags">
+            <?php echo $fields["tid"]->content; ?>
+        </div>
 
         <div class="started">
-            <span class="relativetime" title="Thu, 10 Dec 09 12:45:22 +0000"><em>3 days</em> ago</span>
-            Anonymous <span title="reputation score" class="reputation-score">0</span>
+            <?php echo $fields["created"]->content; ?>
+            <?php echo $fields["name"]->content; ?> <span title="reputation score" class="reputation-score"><?php echo $fields["points"]->content; ?></span>
         </div>
       </div>
     </div>
