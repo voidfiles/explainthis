@@ -30,19 +30,19 @@ a.vote-up-act, a.vote-down-act, span.vote-up-act, span.vote-down-act {
 }
 
 .vote-up-act, .vote-up-inact:hover {
-  background: url(images/a_up_act.png) no-repeat 0px 0px;
+  background: url(/sites/explainthis.tastestalkr.com/themes/yui_grid/assets/img/a_up_act.png) no-repeat 0px 0px;
 }
 
 .vote-up-inact, .up-inact {
-  background: url(images/a_up_inact.png) no-repeat 0px 0px;
+  background: url(/sites/explainthis.tastestalkr.com/themes/yui_grid/assets/img/a_up_inact.png) no-repeat 0px 0px;
 }
 
 .vote-down-act, .vote-down-inact:hover {
-  background: url(images/a_down_act.png) no-repeat 0px 0px;
+  background: url(/sites/explainthis.tastestalkr.com/themes/yui_grid/assets/img/a_down_act.png) no-repeat 0px 0px;
 }
 
 .vote-down-inact, .down-inact {
-  background: url(images/a_down_inact.png) no-repeat 0px 0px;
+  background: url(/sites/explainthis.tastestalkr.com/themes/yui_grid/assets/img/a_down_inact.png) no-repeat 0px 0px;
 }
 
 .vote-points {
@@ -96,12 +96,12 @@ a.vote-up-act, a.vote-down-act, span.vote-up-act, span.vote-down-act {
 
 .vote-up-down-widget-alt .vote-up-act,
 .vote-up-down-widget-alt .vote-up-inact:hover {
-  background: url(images/plus_act.png) no-repeat center 3px;
+  background: url(/sites/explainthis.tastestalkr.com/themes/yui_grid/assets/img/plus_act.png) no-repeat center 3px;
 }
 
 .vote-up-down-widget-alt .vote-up-inact,
 .vote-up-down-widget-alt .up-inact {
-  background: url(images/plus_inact.png) no-repeat center 3px;
+  background: url(/sites/explainthis.tastestalkr.com/themes/yui_grid/assets/img/plus_inact.png) no-repeat center 3px;
 }
 
 * html .vote-up-down-widget-alt .vote-up-act,

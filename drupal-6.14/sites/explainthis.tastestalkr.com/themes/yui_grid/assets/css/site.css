@@ -62,6 +62,34 @@ a:hover {
 .menu .menu-221 {
     margin-right:4em;
 }
+
+.vote-up-act, .vote-up-inact:hover {
+  background: url(../img/a_up_act.png) no-repeat 0px 0px;
+}
+
+.vote-up-inact, .up-inact {
+  background: url(../img/a_up_inact.png) no-repeat 0px 0px;
+}
+
+.vote-down-act, .vote-down-inact:hover {
+  background: url(../img/a_down_act.png) no-repeat 0px 0px;
+}
+
+.vote-down-inact, .down-inact {
+  background: url(../img/a_down_inact.png) no-repeat 0px 0px;
+}
+
+.vote-up-down-widget-alt .vote-up-act,
+.vote-up-down-widget-alt .vote-up-inact:hover {
+  background: url(../img/plus_act.png) no-repeat center 3px;
+}
+
+.vote-up-down-widget-alt .vote-up-inact,
+.vote-up-down-widget-alt .up-inact {
+  background: url(../img/plus_inact.png) no-repeat center 3px;
+}
+
+
 .s0 {font-size:500%;}
 .s1 {font-size:300%;}
 .s2 {font-size:250%;}
