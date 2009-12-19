@@ -32,11 +32,6 @@ if (is_null(theme_get_setting('yui_page_width'))) {
 }
 
 
-/**
- * @file
- * template.php for the vote_up_down.module
- */
-
 function _phptemplate_variables($hook, $vars) {
   switch ($hook) {
     case 'node':
@@ -57,6 +52,7 @@ function _phptemplate_variables($hook, $vars) {
   }
   return $vars;
 }
+
 
 function ago($timestamp){
    $difference = time() - $timestamp;

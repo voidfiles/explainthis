@@ -36,6 +36,50 @@ a:hover {
     background-color:#000;
     padding:.3em .55em;
 }
+
+/* Voting */
+
+.votes {
+color:#555;padding:0 0 7px 0;text-align:center;
+}
+
+.narrow .votes {
+background:#eee;float:left;margin:0 3px 0 0;padding:5px;width:38px;height:38px;
+}
+
+.vote-count-post {
+display:block;font-size:240%;
+}
+
+.vote-up,.vote-down {
+display:block;margin:0 auto;
+}
+
+.vote-arrow {
+height: 25px;
+width: 40px;
+}
+
+.vote-up-act, .vote-up-inact:hover {
+background: url(../img/a_up_act.png) no-repeat 0px 0px;
+}
+
+.vote-up-inact, .up-inact {
+background: url(../img/a_up_inact.png) no-repeat 0px 0px;
+}
+
+.vote-down-act, .vote-down-inact:hover {
+background: url(../img/a_down_act.png) no-repeat 0px 0px;
+}
+
+.vote-down-inact, .down-inact {
+background: url(../img/a_down_inact.png) no-repeat 0px 0px;
+}
+
+.vote-count-separator {
+border-top:1px solid silver;width:30px;margin-left:15px;
+}
+
 /* Menus */
 
 .menu {
@@ -89,7 +133,10 @@ a:hover {
   background: url(../img/plus_inact.png) no-repeat center 3px;
 }
 
-
+.menu li.active a{
+    background-color:#fff;
+    color:#000;
+}
 .s0 {font-size:500%;}
 .s1 {font-size:300%;}
 .s2 {font-size:250%;}
