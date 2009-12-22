@@ -7,4 +7,7 @@
     <div class="content"><?php print $content?></div>
 
   </div>
+  <?php print $vote_storylink_via ?>
+  <?php print $vote_up_down_widget ?>
+
 

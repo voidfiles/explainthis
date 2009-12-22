@@ -636,46 +636,7 @@ width:86px;float:left;margin-right:8px;
 background:none;margin:0 0 0 7px;padding:0;width:auto;height:48px;float:left;
 }
 
-.votes {
-color:#555;padding:0 0 7px 0;text-align:center;
-}
 
-.narrow .votes {
-background:#eee;float:left;margin:0 3px 0 0;padding:5px;width:38px;height:38px;
-}
-
-.vote-count-post {
-display:block;font-size:240%;
-}
-
-.vote-up,.vote-down {
-display:block;margin:0 auto;
-}
-
-.vote-arrow {
-height: 25px;
-width: 40px;
-}
-
-.vote-up-act, .vote-up-inact:hover {
-background: url(images/vote-arrow-up-on.png) no-repeat 0px 0px;
-}
-
-.vote-up-inact, .up-inact {
-background: url(images/vote-arrow-up.png) no-repeat 0px 0px;
-}
-
-.vote-down-act, .vote-down-inact:hover {
-background: url(images/vote-arrow-down-on.png) no-repeat 0px 0px;
-}
-
-.vote-down-inact, .down-inact {
-background: url(images/vote-arrow-down.png) no-repeat 0px 0px;
-}
-
-.vote-count-separator {
-border-top:1px solid silver;width:30px;margin-left:15px;
-}
 
 .views {
 padding-top:4px;color:#999;text-align:center;
