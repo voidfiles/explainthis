@@ -24,7 +24,7 @@
         <?php echo $header_content; ?>
 
     </div>
-    <div id="bd" role="main" class="margin_top_1em">
+    <div id="bd" role="main" class="margin_top_2em">
         <div id="yui-main">
             <div class="yui-b">
                 <?PHP if($above_content): ?>
@@ -37,6 +37,7 @@
                 <?php endif; ?>
                 <div class="yui-g">
                     <?php print $in_above_content; ?>
+                    <?php if($messages) { ?><?php print $messages; ?><?php }?>
                     <?php print $content; ?>
                     <?php print $in_below_content; ?>
                 </div>

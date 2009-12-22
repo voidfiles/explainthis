@@ -11,7 +11,7 @@ Drupal.behaviors.voteUpDownAutoAttach = function () {
     // Remove the title, so no tooltip will displayed.
     $(this).removeAttr('title');
     // Remove the href link.
-    $(this).html('');
+    //$(this).html('');
     // Create an object with this uri, so that we can attach events to it.
     if (!vdb[uri]) {
       vdb[uri] = new Drupal.VDB(this, uri);
@@ -29,8 +29,9 @@ Drupal.VDB = function (elt, uri) {
   this.id = $(elt).attr('id');
   this.dir1 = this.id.indexOf('vote_up') > -1 ? 'up' : 'down';
   this.dir2 = this.dir1 == 'up' ? 'down' : 'up';
-  $(elt).click(function () {
+  $(elt).click(function (event) {
     // Ajax POST request for the voting data
+    event.preventDefault();
     $.ajax({
       type: 'GET',
       url: db.uri,

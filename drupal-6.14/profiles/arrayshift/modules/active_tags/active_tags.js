@@ -5,7 +5,7 @@ function activeTagsActivate(context) {
   if (wrapper.length == 1) {
     var tagarea = activeTagsWidget(context);
     wrapper.before(tagarea);
-    Drupal.behaviors.autocomplete(document);
+    //Drupal.behaviors.autocomplete(document);
   }
   $('.add-tag:not(.tag-processed)').click(function() {
     jQuery.each($(this).prev().val().split(','), function(i, v) {

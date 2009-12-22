@@ -1,3 +1,4 @@
+<?PHP
 /**
  * @file vote_up_down_widget.tpl.php
  *
@@ -10,12 +11,17 @@
  * - $cid: $node->nid or $comment->cid;
  */
 
- $points = str_replace(" points","",$points);
 ?>
 <div class="vote-up-down-widget">
   <?php if ($class1) : ?>
-    <span id="vote_up_<?php print $cid; ?>" class="<?php print $class1; ?>" title="<?php print $title1; ?>"><?php print $link1; ?></span>
-    <?php echo $points; ?>
-    <span id="vote_down_<?php print $cid; ?>" class="<?php print $class2; ?>" title="<?php print $title2; ?>"><?php print $link2; ?></span>
+    <span id="vote_up_<?php print $cid; ?>" class="vote_up <?php print $class1; ?>" title="<?php print $title1; ?>">
+        <a href="<?php print $title1; ?>" class="s4" title="vote up">&#9650;</a>
+    </span>
+    <span class="points s3">
+        <?php echo $points; ?>
+    </span>
+    <span id="vote_down_<?php print $cid; ?>" class="vote_down <?php print $class2; ?>" title="<?php print $title2; ?>">
+        <a href="<?php print $title2; ?>" class="s4" title="vote down">&#9660;</a>
+    </span>
   <?php endif; ?>
 </div>

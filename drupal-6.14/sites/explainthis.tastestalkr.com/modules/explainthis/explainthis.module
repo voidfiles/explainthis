@@ -1,6 +1,6 @@
 <?PHP
 
-function explainthis_form_question_node_form_alter(&$form, $form_state, $form_id){
+function explainthis_form_question_node_form_alter(&$form, $form_state){
     if($_GET["title"] && empty($form["title"]["#default_value"])){
         $form["title"]["#default_value"] = $_GET["title"];
     }

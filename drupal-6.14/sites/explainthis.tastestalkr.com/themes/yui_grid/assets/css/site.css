@@ -3,6 +3,15 @@ body {
 }
 #custom-doc { width: 90%; min-width:750px;}
 
+.question-summary {
+    width:100%;
+}
+
+.question-summary .summary {
+    float:none;
+    margin-left:150px;
+    width:auto;
+}
 a {
     color:#000;
     text-decoration:none;
@@ -37,6 +46,37 @@ a:hover {
     padding:.3em .55em;
 }
 
+
+.block {
+    color:#444444;
+    padding:0;
+}
+
+.flag-favorite {
+    display:block;
+    float:left;
+    left:2px;
+    position:relative;
+    text-align:center;
+    width:100%;
+    margin-top:.7em;
+}
+
+.flag-favorite a.unflag-action,.flag-favorite a.flag-action:hover {
+    color: #000;
+}
+
+.flag-favorite a.unflag-action:hover,.flag-favorite a.flag-action {
+    color: green;
+}
+
+/* Node */
+.node .actions {float:left;width:50px;}
+.node .content {margin-left:60px;}
+
+.node {
+    border-bottom:1px solid black;
+}
 /* Voting */
 
 .votes {
@@ -60,25 +100,21 @@ height: 25px;
 width: 40px;
 }
 
-.vote-up-act, .vote-up-inact:hover {
-background: url(../img/a_up_act.png) no-repeat 0px 0px;
-}
-
-.vote-up-inact, .up-inact {
-background: url(../img/a_up_inact.png) no-repeat 0px 0px;
-}
-
-.vote-down-act, .vote-down-inact:hover {
-background: url(../img/a_down_act.png) no-repeat 0px 0px;
-}
-
-.vote-down-inact, .down-inact {
-background: url(../img/a_down_inact.png) no-repeat 0px 0px;
+.vote_up {
+    margin-bottom:.7em;
 }
 
 .vote-count-separator {
 border-top:1px solid silver;width:30px;margin-left:15px;
 }
+.vote-up-down-widget {
+    border:0;
+    clear:left;
+    float:left;
+    margin:0;
+    padding:2px;
+}
+
 
 /* Menus */
 
@@ -107,31 +143,45 @@ border-top:1px solid silver;width:30px;margin-left:15px;
     margin-right:4em;
 }
 
-.vote-up-act, .vote-up-inact:hover {
-  background: url(../img/a_up_act.png) no-repeat 0px 0px;
+.vote-up-down-widget{
+    text-align:center;
+    width:100%;
+    
 }
+
+.vote-up-down-widget a:hover {
+    color: green;
+}
+.vote-up-down-widget span, .vote-up-down-widget a {
+    width:100%;
+}
+.vote-up-act, .vote-up-inact:hover,.vote-up-act a {
+  /*background: url(../img/a_up_act.png) no-repeat 0px 0px;*/
+  background:none;
+  color: green;
+}
+
 
 .vote-up-inact, .up-inact {
-  background: url(../img/a_up_inact.png) no-repeat 0px 0px;
+  background: none;
 }
-
-.vote-down-act, .vote-down-inact:hover {
-  background: url(../img/a_down_act.png) no-repeat 0px 0px;
+/*
+  .vote-down-inact, .down-inact {
+    background: url(../img/a_down_inact.png) no-repeat 0px 0px;
+  }
 }
-
+*/
 .vote-down-inact, .down-inact {
-  background: url(../img/a_down_inact.png) no-repeat 0px 0px;
+    background:none;
+}
+.vote-down-act, .vote-down-inact:hover,.vote-down-act a {
+    background:none;
+  color: green;
 }
 
-.vote-up-down-widget-alt .vote-up-act,
-.vote-up-down-widget-alt .vote-up-inact:hover {
-  background: url(../img/plus_act.png) no-repeat center 3px;
-}
 
-.vote-up-down-widget-alt .vote-up-inact,
-.vote-up-down-widget-alt .up-inact {
-  background: url(../img/plus_inact.png) no-repeat center 3px;
-}
+
+
 
 .menu li.active a{
     background-color:#fff;
