@@ -31,6 +31,48 @@ if (is_null(theme_get_setting('yui_page_width'))) {
   theme_get_setting('', TRUE);
 }
 
+function ago($timestamp){
+   $difference = time() - $timestamp;
+   $periods = array("second", "minute", "hour", "day", "week", "month", "years", "decade");
+   $lengths = array("60","60","24","7","4.35","12","10");
+   for($j = 0; $difference >= $lengths[$j]; $j++)
+   $difference /= $lengths[$j];
+   $difference = round($difference);
+   if($difference != 1) $periods[$j].= "s";
+   $text = "$difference $periods[$j] ago";
+   return $text;
+}
+
+function yui_grid_node_submitted($node) {
+    $user = user_load(array("uid"=>$node->uid));
+    $vars = array("account"=>$user);
+    gravatar_preprocess_user_picture($vars);
+    $html = <<<HTML
+    <div class="submitted">@datetime</div>
+
+<div class="usercard clearfix">
+    <div class="left">
+        <div class="picture">!picture</div>
+        <div class="points">!points</div>
+    </div>
+    <div class="right">
+        <div class="name">!username</div>
+        <div class="roles">User</div>
+    </div>
+</div>
+HTML;
+  return t($html,
+    array(
+      '!username' => theme('username', $node),
+      '!picture' => $vars["picture"],
+      '!points' => userpoints_get_current_points($node->uid),
+      
+      '@datetime' => ago($node->created),
+    ));
+}
+
+
+
 
 function _phptemplate_variables($hook, $vars) {
   switch ($hook) {
@@ -54,14 +96,4 @@ function _phptemplate_variables($hook, $vars) {
 }
 
 
-function ago($timestamp){
-   $difference = time() - $timestamp;
-   $periods = array("second", "minute", "hour", "day", "week", "month", "years", "decade");
-   $lengths = array("60","60","24","7","4.35","12","10");
-   for($j = 0; $difference >= $lengths[$j]; $j++)
-   $difference /= $lengths[$j];
-   $difference = round($difference);
-   if($difference != 1) $periods[$j].= "s";
-   $text = "$difference $periods[$j] ago";
-   return $text;
-}
+
