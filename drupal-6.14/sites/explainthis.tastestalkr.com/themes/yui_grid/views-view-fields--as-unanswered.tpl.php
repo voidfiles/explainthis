@@ -33,7 +33,7 @@
         <div class="mini-counts"><?php echo $fields["totalcount"]->content; ?></div>
         <div>views</div>
     </div>
-    <div class="summary">
+    <div class="summary clearfix">
         <div class="s5"><?php echo $fields["title"]->content; ?></div>
         <div class="tags">
             <?php echo $fields["tid"]->content; ?>

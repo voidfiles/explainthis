@@ -48,16 +48,19 @@ function yui_grid_node_submitted($node) {
     $vars = array("account"=>$user);
     gravatar_preprocess_user_picture($vars);
     $html = <<<HTML
-    <div class="submitted">@datetime</div>
+    
 
 <div class="usercard clearfix">
+    <div class="submitted margin_bottom_1em">@datetime</div>
     <div class="left">
-        <div class="picture">!picture</div>
-        <div class="points">!points</div>
+        !picture
     </div>
     <div class="right">
         <div class="name">!username</div>
-        <div class="roles">User</div>
+        <div>
+            <span class="role">Journalist</span> 
+            <span class="points">!points</span>
+        </div>
     </div>
 </div>
 HTML;

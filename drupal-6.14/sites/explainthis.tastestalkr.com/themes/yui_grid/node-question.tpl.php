@@ -13,7 +13,7 @@
             <?php echo $terms; ?>
         </div>
         <div class="status  context_item">
-            <em class="s5">Unclaimed</em>
+            <em>Unclaimed</em>
         </div>
         <div class="person  context_item last">
             <?php echo $submitted; ?>

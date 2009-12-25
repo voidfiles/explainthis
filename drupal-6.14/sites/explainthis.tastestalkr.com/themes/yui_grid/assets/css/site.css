@@ -85,9 +85,32 @@ a:hover {
     margin:0 .5em 0 0;
     padding:0;
 }
+
+
+.summary .tags {
+    width:100%;
+    float:left;
+    margin-right:-200px;
+    
+}
+
+.summary .tags {
+    width:100%;
+    float:left;
+    margin-right:-200px;
+    
+}
+
+.summary .started {
+    width:190px;
+    float:right;
+    text-align:right;
+}
+
+
 /* Node */
 .node .actions {float:left;width:50px;}
-.node .content {margin-left:60px;}
+.node .content, .node .context {margin-left:60px;}
 
 .node {
     border-bottom:1px solid black;
@@ -106,34 +129,30 @@ a:hover {
 }
 
 /* User Card */
-.submitted {
-    text-align:right;
-}
+
 .usercard {
-    border:2px solid #000;
     width:129px;
     float:right;
 }
 .usercard .left{
-    border-right:1px solid #000;
     width:32px;
     float:left;
     text-align:center;
 }
-.usercard .left .picture {
-    height:32px;
-    border-bottom:1px solid black;
-}
+
 .usercard .right{
     width:96px;
     float:left;
 }
-.usercard .right .name {
-    height:32px;
-    border-bottom:1px solid black;
-}
-.usercard .right .name, .usercard .right .roles{
+
+.usercard .right .name, .usercard .right .role {
     padding-left:4px;
+}
+
+.usercard .right .points{
+    text-align:right;
+    float:right;
+    padding-right:4px;
 }
 /* Voting */
 
