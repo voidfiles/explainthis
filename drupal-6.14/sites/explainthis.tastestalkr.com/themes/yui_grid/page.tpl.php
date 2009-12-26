@@ -9,7 +9,10 @@
 <body>
 <div id="custom-doc" class="yui-t6">
     <div id="hd" role="banner">
-        <h1 class="s0 drop-shadow-dl"><a href="<?PHP echo check_url($front_page);?>"><?php print $site_name ?></a></h1>
+        <h1 class="s0 drop-shadow-dl">
+            <a href="<?PHP echo check_url($front_page);?>"><?php print $site_name ?></a>
+            <em style="color:red;text-align:right;font-size:60%;">Beta</em>
+        </h1>
         <?PHP if($site_slogan){ ?><div><em><?php echo $site_slogan; ?></em></div><?PHP } ?>
         <?php if (isset($primary_links)) { ?>
             <?php print theme('links', $primary_links, array('class' =>'menu horizontal clearfix s4 drop-shadow-dl ui-corner-all', 'id' => 'mainnav')); ?>
