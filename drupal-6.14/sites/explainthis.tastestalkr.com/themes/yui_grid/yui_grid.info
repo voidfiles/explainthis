@@ -8,6 +8,9 @@ stylesheets[all][] = assets/css/reset-fonts-grids.css
 ; stylesheets[all][] = assets/css/as.css
 stylesheets[all][] = assets/css/site.css
 
+scripts[] = assets/js/site.js
+
+
 ; Regions
 regions[sidebar] = Sidebar
 regions[left] = Left

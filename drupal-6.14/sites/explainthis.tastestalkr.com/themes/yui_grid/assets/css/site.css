@@ -38,12 +38,24 @@ a:hover {
     padding:0;
 }
 .prompt button {
-    width:2.5em;
     display:block;
-    float:left;
+    float:right;
     margin-left:2%;
+    margin-top:.5em;
 }
 
+.prompt .char_count {
+    float:right;
+}
+.prompt .standing_by {
+    float:left;
+}
+.prompt textarea {
+    display:block;
+    width:100%;
+    height: 2.5em;
+    overflow:hidden;
+}
 .menu {
     background-color:#000;
     padding:.3em .55em;
@@ -76,6 +88,7 @@ a:hover {
 .flag-favorite a.unflag-action:hover,.flag-favorite a.flag-action {
     color: #000;
 }
+
 
 /* Tags */
 .tags ul li {
