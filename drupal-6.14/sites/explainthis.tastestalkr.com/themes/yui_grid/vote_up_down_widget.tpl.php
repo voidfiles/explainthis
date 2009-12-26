@@ -13,15 +13,18 @@
 
 ?>
 <div class="vote-up-down-widget">
-  <?php if ($class1) : ?>
+    <?php if($logged_in): ?>
     <span id="vote_up_<?php print $cid; ?>" class="vote_up <?php print $class1; ?>" title="<?php print $title1; ?>">
         <a href="<?php print $title1; ?>" class="s4" title="vote up">&#9650;</a>
     </span>
+    <?php endif; ?>
     <span class="points s3">
         <?php echo $points; ?>
+        <?php if(!$logged_in): ?><br><em style="font-size:70%">Votes</em><?php endif; ?>
     </span>
+    <?php if($logged_in): ?>
     <span id="vote_down_<?php print $cid; ?>" class="vote_down <?php print $class2; ?>" title="<?php print $title2; ?>">
         <a href="<?php print $title2; ?>" class="s4" title="vote down">&#9660;</a>
     </span>
-  <?php endif; ?>
+    <?php endif; ?>
 </div>

@@ -55,6 +55,10 @@ a:hover {
     padding:0;
 }
 
+.block {
+    margin-bottom:1em;
+}
+
 .flag-favorite {
     display:block;
     float:left;
@@ -226,6 +230,18 @@ ul.menu li {
     color:#000;
 }
 
+.block .menu {
+    background-color:#fff;
+}
+.block .menu li a{
+    background-color:#FFF;
+    color:#000;
+}
+
+.block .menu li a:hover {
+    background-color:#000;
+    color:#fff;
+}
 .menu .menu-221 {
     margin-right:4em;
 }

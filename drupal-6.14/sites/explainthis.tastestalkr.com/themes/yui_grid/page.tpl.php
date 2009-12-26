@@ -10,13 +10,6 @@
 <div id="custom-doc" class="yui-t6">
     <div id="hd" role="banner">
         <h1 class="s0 drop-shadow-dl"><a href="<?PHP echo check_url($front_page);?>"><?php print $site_name ?></a></h1>
-        <div id="topbar">
-            <div id="hlinks">
-                <a href="/user?destination=front">login</a> / <a href="/user/register?destination=front">register</a> 
-                <span class="link-separator">|</span><a href="/about">about</a> 
-                <span class="link-separator">|</span><a href="/faq">faq</a>
-            </div>
-        </div>
         <?PHP if($site_slogan){ ?><div><em><?php echo $site_slogan; ?></em></div><?PHP } ?>
         <?php if (isset($primary_links)) { ?>
             <?php print theme('links', $primary_links, array('class' =>'menu horizontal clearfix s4 drop-shadow-dl ui-corner-all', 'id' => 'mainnav')); ?>
