@@ -7,6 +7,9 @@ body {
     width:100%;
 }
 
+.drop-shadow-dl {
+    text-shadow: 1px 1px 1px rgba(112,112,112,.4);
+}
 .question-summary .summary {
     float:none;
     margin-left:150px;
@@ -63,13 +66,25 @@ a:hover {
 }
 
 .flag-favorite a.unflag-action,.flag-favorite a.flag-action:hover {
-    color: #000;
-}
-
-.flag-favorite a.unflag-action:hover,.flag-favorite a.flag-action {
     color: green;
 }
 
+.flag-favorite a.unflag-action:hover,.flag-favorite a.flag-action {
+    color: #000;
+}
+
+/* Tags */
+.tags ul li {
+    display:inline;
+}
+.item-list ul li {
+    list-style-image:none;
+    list-style-position:inside;
+    list-style-type:none;
+    display:inline;
+    margin:0 .5em 0 0;
+    padding:0;
+}
 /* Node */
 .node .actions {float:left;width:50px;}
 .node .content {margin-left:60px;}
@@ -77,19 +92,50 @@ a:hover {
 .node {
     border-bottom:1px solid black;
 }
+
+.node .context .context_item {
+    width:32%;
+    margin-right:.67%;
+    float:left;
+}
+
+.node .context div.last {
+    width:32%;
+    float:right;
+    margin:0;
+}
+
+/* User Card */
+.submitted {
+    text-align:right;
+}
+.usercard {
+    border:2px solid #000;
+    width:129px;
+    float:right;
+}
+.usercard .left{
+    border-right:1px solid #000;
+    width:32px;
+    float:left;
+    text-align:center;
+}
+.usercard .left .picture {
+    height:32px;
+    border-bottom:1px solid black;
+}
+.usercard .right{
+    width:96px;
+    float:left;
+}
+.usercard .right .name {
+    height:32px;
+    border-bottom:1px solid black;
+}
+.usercard .right .name, .usercard .right .roles{
+    padding-left:4px;
+}
 /* Voting */
-
-.votes {
-color:#555;padding:0 0 7px 0;text-align:center;
-}
-
-.narrow .votes {
-background:#eee;float:left;margin:0 3px 0 0;padding:5px;width:38px;height:38px;
-}
-
-.vote-count-post {
-display:block;font-size:240%;
-}
 
 .vote-up,.vote-down {
 display:block;margin:0 auto;
@@ -118,6 +164,21 @@ border-top:1px solid silver;width:30px;margin-left:15px;
 
 /* Menus */
 
+ul {
+    display:block;
+}
+
+ul li {
+    display:block;
+    float:none;
+    clear:both;
+
+}
+
+.horizontal li {
+    clear: none;
+    margin: 0;
+}
 .menu {
     display:block;
     margin-bottom:0;
@@ -126,6 +187,13 @@ border-top:1px solid silver;width:30px;margin-left:15px;
 .menu li {
     display:block;
     float:left;
+    margin-top:.25em;
+    margin-bottom:.125em;
+    
+}
+ul.menu li {
+    margin-top:.25em;
+    margin-bottom:.125em;
 }
 .menu li a{
     width:100%;
@@ -180,7 +248,21 @@ border-top:1px solid silver;width:30px;margin-left:15px;
 }
 
 
-
+.info-block {
+    display:block;
+    float:left;
+    width:38px;
+    text-align:center;
+    height:38px;
+    padding:5px;
+    margin:0 3px 0 0;
+}
+           
+           
+.gray_to_white {
+    background:#fff;
+    background: -webkit-gradient(linear, left top, left bottom, from(#00abeb), to(#fff), color-stop(0.5, #fff), color-stop(0.5, #66cc00));
+}
 
 
 .menu li.active a{
@@ -199,7 +281,6 @@ border-top:1px solid silver;width:30px;margin-left:15px;
 .s9 {font-size:80%;}
 
 
-
 /* Corner radius from jquery-ui css base */
 .ui-corner-tl { -moz-border-radius-topleft: 4px; -webkit-border-top-left-radius: 4px; }
 .ui-corner-tr { -moz-border-radius-topright: 4px; -webkit-border-top-right-radius: 4px; }
@@ -209,7 +290,7 @@ border-top:1px solid silver;width:30px;margin-left:15px;
 .ui-corner-bottom { -moz-border-radius-bottomleft: 4px; -webkit-border-bottom-left-radius: 4px; -moz-border-radius-bottomright: 4px; -webkit-border-bottom-right-radius: 4px; }
 .ui-corner-right {  -moz-border-radius-topright: 4px; -webkit-border-top-right-radius: 4px; -moz-border-radius-bottomright: 4px; -webkit-border-bottom-right-radius: 4px; }
 .ui-corner-left { -moz-border-radius-topleft: 4px; -webkit-border-top-left-radius: 4px; -moz-border-radius-bottomleft: 4px; -webkit-border-bottom-left-radius: 4px; }
-.ui-corner-all { -moz-border-radius: 4px; -webkit-border-radius: 4px; }
+.ui-corner-all,#mainnav li a { -moz-border-radius: 4px; -webkit-border-radius: 4px; }
 /* additional space between elements */
 /* spacing */
 .margin_top_halfem      { margin-top:.5em; }
@@ -235,6 +316,7 @@ border-top:1px solid silver;width:30px;margin-left:15px;
 .margin_right_2_5em  { margin-right:2.5em; }
 .margin_right_3em    { margin-right:3em; }
 
+.padding_bottom_halfem      { padding-bottom:.5em; }
 .padding_top_1em      { padding-top:1em; }
 .padding_top_1_5em    { padding-top:1.5em; }
 .padding_top_2em      { padding-top:2em; }

@@ -5,7 +5,7 @@ engine = phptemplate
 
 ; Style sheets
 stylesheets[all][] = assets/css/reset-fonts-grids.css
-stylesheets[all][] = assets/css/as.css
+; stylesheets[all][] = assets/css/as.css
 stylesheets[all][] = assets/css/site.css
 
 ; Regions
