@@ -759,7 +759,7 @@ color:#07C;margin-left:3px;font-weight:bold;font-size:140%;
 }
 
 .block {
-color:#444;padding:8px 8px 2px 8px;margin-bottom:10px;
+color:#444;padding:0;margin-bottom:.5em;
 }
 
 .block p.label-key {
