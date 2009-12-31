@@ -76,7 +76,6 @@ HTML;
 
 
 
-
 function _phptemplate_variables($hook, $vars) {
   switch ($hook) {
     case 'node':

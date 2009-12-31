@@ -42,6 +42,7 @@ a:hover {
     float:right;
     margin-left:2%;
     margin-top:.5em;
+    padding:5px 10px;
 }
 
 .prompt .char_count {

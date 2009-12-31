@@ -1,10 +1,19 @@
 <?PHP
 
 function explainthis_form_question_node_form_alter(&$form, $form_state){
+    $form["title"]["#maxlength"] = 140;
     if($_GET["title"] && empty($form["title"]["#default_value"])){
+        $form_state['values']['title'] = $_GET["title"];
         $form["title"]["#default_value"] = $_GET["title"];
     }
+
 }
 
-
+function explainthis_validate(&$node){
+    var_dump("hellow");
+    drupal_set_message('<h1>Hello</h1>'); 
+    if ($node->title && strlen($node->title) > 140 ) {
+      form_set_error('title', t('The max length of title is 140 Characters'));
+    }
+}
 ?>
