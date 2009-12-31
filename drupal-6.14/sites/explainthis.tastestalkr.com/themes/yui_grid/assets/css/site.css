@@ -22,10 +22,29 @@ a {
 a:hover {
     color:#444;
 }
+
+
 .prompt {
     background-color:#ddd;
     padding:10px 20px;
 }
+.prompt {
+    background-image: -moz-linear-gradient(top, #DDD, #EEE);
+    background-image: -webkit-gradient(linear, top, bottom, from(#DDD), to(#EEE));
+    filter:progid:DXImageTransform.Microsoft.gradient(startColorstr=#DDDDDDDD,endColorstr=#CCCCCCCC);
+    -ms-filter: "progid:DXImageTransform.Microsoft.gradient(startColorstr=#DDDDDDDD,endColorstr=#CCCCCCCC)";
+                                                                                       
+}
+
+.prompt {
+  -webkit-box-shadow: 0 0 10px rgba(50, 50, 50, 0.8);
+  -moz-box-shadow: 0 0 10px rgba(50, 50, 50, 0.8);
+  box-shadow: 0 0 10px rgba(50, 50, 50, 0.5);
+  filter:progid:DXImageTransform.Microsoft.glow(Strength=5, Color='gray');
+  -ms-filter:"progid:DXImageTransform.Microsoft.glow(Strength=3, Color='gray')";
+}
+
+
 .prompt label {
     display:block;
 }
@@ -237,11 +256,17 @@ ul.menu li {
     background-color:#000;
     color:#fff;
     padding:.2em .5em;
+    
 }
 
 .menu li a:hover {
     background-color:#fff;
     color:#000;
+    background-image: -moz-linear-gradient(top, #CCC, #FFF);
+    background-image: -webkit-gradient(linear, 0% 0%  , 0% 100%, from(#CCC), to(#FFF));
+    filter:progid:DXImageTransform.Microsoft.gradient(startColorstr=#CCCCCCCC,endColorstr=#FFFFFFFF);
+    -ms-filter: "progid:DXImageTransform.Microsoft.gradient(startColorstr=#CCCCCCCC,endColorstr=#FFFFFFFF)";
+
 }
 
 .block .menu {
@@ -254,6 +279,7 @@ ul.menu li {
 
 .block .menu li a:hover {
     background-color:#000;
+    background-image:none;
     color:#fff;
 }
 .menu .menu-221 {
