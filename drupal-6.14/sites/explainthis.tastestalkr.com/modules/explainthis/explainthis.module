@@ -6,6 +6,8 @@ function explainthis_form_question_node_form_alter(&$form, $form_state){
         $form_state['values']['title'] = $_GET["title"];
         $form["title"]["#default_value"] = $_GET["title"];
     }
+    
+    $form['title']['#description'] = t("Do you want to explain your question? Add some links or background? Use the box below. This is an optional step. If your question is self-explanatory, no need to elaborate.");
 
 }
 

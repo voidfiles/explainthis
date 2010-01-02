@@ -7,7 +7,7 @@
     <?PHP print $styles; ?>
 </head>
 <body>
-<div id="custom-doc" class="yui-t6">
+<div id="custom-doc" class="yui-t5">
     <div id="hd" role="banner">
         <h1 class="s0 drop-shadow-dl">
             <a href="<?PHP echo check_url($front_page);?>"><?php print $site_name ?></a>
