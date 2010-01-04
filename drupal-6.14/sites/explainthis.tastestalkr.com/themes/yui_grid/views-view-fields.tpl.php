@@ -34,7 +34,7 @@
         <div>views</div>
     </div>
     <div class="summary clearfix">
-        <div class="s5"><?php echo $fields["title"]->content; ?></div>
+        <div class="s5 margin_bottom_halfem"><?php echo $fields["title"]->content; ?></div>
         <div class="tags">
             <?php echo $fields["tid"]->content; ?>
         </div>
