@@ -1,7 +1,7 @@
 body {
     font-family:"MyriadPro-Regular","Myriad Pro Regular",MyriadPro,"Myriad Pro",Helvetica,Arial,sans-serif;
 }
-#custom-doc { width: 90%; min-width:750px;}
+#custom-doc { width: 95%; min-width:750px;}
 
 .question-summary {
     width:100%;
@@ -16,11 +16,14 @@ body {
     width:auto;
 }
 a {
-    color:#000;
+    color:rgb(230,80,80);
     text-decoration:none;
 }
 a:hover {
     color:#444;
+}
+#hd h1 a {
+color: black;
 }
 
 
@@ -74,11 +77,10 @@ a:hover {
     display:block;
     width:100%;
     height: 2.5em;
-    overflow:hidden;
 }
 .menu {
     background-color:#000;
-    padding:.3em .55em;
+    padding:.1em .2em;
 }
 
 
@@ -243,19 +245,19 @@ ul li {
 .menu li {
     display:block;
     float:left;
-    margin-top:.25em;
-    margin-bottom:.125em;
+    margin-top:.125em;
+    margin-bottom:.06125em;
     
 }
 ul.menu li {
-    margin-top:.25em;
-    margin-bottom:.125em;
+    margin-top:.125em;
+    margin-bottom:.06125em;
 }
 .menu li a{
     width:100%;
     background-color:#000;
     color:#fff;
-    padding:.2em .5em;
+    padding:.1em .2em;
     
 }
 

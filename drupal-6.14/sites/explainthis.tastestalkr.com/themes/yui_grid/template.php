@@ -58,7 +58,7 @@ function yui_grid_node_submitted($node) {
     <div class="right">
         <div class="name">!username</div>
         <div>
-            <span class="role">Journalist</span> 
+            <!-- <span class="role">Journalist</span> not sure how to do this part yet --> 
             <span class="points">!points</span>
         </div>
     </div>

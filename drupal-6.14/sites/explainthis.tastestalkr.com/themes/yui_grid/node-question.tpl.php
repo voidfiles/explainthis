@@ -7,7 +7,7 @@
         <?php echo $node->links["flag-favorite"]["title"]; ?>
         <!--<a href="#" class="checkmark s3" title="Check this to keep track of this question.">&#x272D;</a>-->
     </div>
-    <div class="content margin_bottom_1em"><?php print $node->content["body"]["#value"]; ?></div>
+    <div class="content s6 margin_bottom_1em"><?php print $node->content["body"]["#value"]; ?></div>
     <div class="context clearfix">
         <div class="tags context_item">
             <?php echo $terms; ?>
