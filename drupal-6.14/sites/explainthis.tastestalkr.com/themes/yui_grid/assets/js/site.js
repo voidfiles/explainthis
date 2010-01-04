@@ -24,7 +24,6 @@ $(document).ready(function() {
     if(chars.length == 0){
         var title_text = $("#edit-title").val();
         var current_left = 140 - title_text.length;
-        console.log(current_left);
         $("label[for=edit-title]").append("&nbsp; Char Count: &nbsp;<span class='char_count'>"+current_left+"</span>");
         
         chars = $("label[for=edit-title] span.char_count:first");
@@ -53,5 +52,7 @@ $(document).ready(function() {
         }
         
         chars.text(current_total);
+
+	return true;
     });
 });

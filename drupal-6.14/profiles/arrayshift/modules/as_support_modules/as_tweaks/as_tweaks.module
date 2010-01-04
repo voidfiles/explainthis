@@ -33,7 +33,7 @@ function as_tweaks_form_alter(&$form, &$form_state, &$form_id) {
     unset($form['body_field']['body']['#title']);
     $form['body_field']['body']['#rows'] = 15;
     $form['title']['#description'] = t("What's your programming question? Be descriptive.");
-    $form['title']['#description'] = t("Do you want to explain your question? Add some links or background? Use the box below. This is an optional step. If your question is self-explanatory, no need to elaborate.");
+    $form['title']['#description'] = t("Do you want to explain your question? Add some links or background? Use the box below. This is an required step. If your question is self-explanatory, just tell us why it interests you.");
     $form['taxonomy']['#weight'] = 10;
   }
   
