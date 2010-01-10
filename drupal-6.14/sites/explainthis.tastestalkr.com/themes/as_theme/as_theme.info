@@ -1,0 +1,28 @@
+name = AS Theme - YUI 
+description = Clean, pure CSS table-less example theme based upon YUI 2.7.0 reset-fonts-grid-base with ARIA Landmark Roles, for Array Shift install profile.
+core = 6.x
+engine = phptemplate
+
+; Style sheets
+stylesheets[all][] = assets/css/reset-fonts-grids.css
+stylesheets[all][] = assets/css/site.css
+
+; Regions
+regions[sidebar] = Sidebar
+regions[left] = Left
+regions[right] = Right
+regions[content] = Content
+regions[header] = Header
+regions[footer] = Footer
+regions[above_content] = above_content
+regions[in_above_content] = in_above_content
+regions[in_below_content] = in_below_content
+regions[header_content] = Header Content
+; Plugins 
+plugins[panels][layouts] = layouts
+; Information added by drupal.org packaging script on 2009-06-09
+version = "6.x-1.2"
+core = "6.x"
+project = "as_theme"
+datestamp = "1244570842"
+
