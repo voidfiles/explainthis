@@ -23,6 +23,7 @@ $(document).ready(function() {
     
     if(chars.length == 0){
         var title_text = $("#edit-title").val();
+	if(title_text) {
         var current_left = 140 - title_text.length;
         $("label[for=edit-title]").append("&nbsp; Char Count: &nbsp;<span class='char_count'>"+current_left+"</span>");
         
@@ -33,6 +34,7 @@ $(document).ready(function() {
         } else {
             chars.css("color","");
         }
+	}
     }
     
     $("#edit-title").bind("keyup",function(e){

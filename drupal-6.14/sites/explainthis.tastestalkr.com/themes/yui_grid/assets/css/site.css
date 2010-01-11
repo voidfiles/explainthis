@@ -156,6 +156,10 @@ color: black;
 .node .actions {float:left;width:50px;}
 .node .content, .node .context {margin-left:60px;}
 
+.content p {
+   margin-bottom:.5em;
+}
+
 .node {
     border-bottom:1px solid black;
 }
