@@ -73,10 +73,15 @@ color: black;
 .prompt .standing_by {
     float:left;
 }
+.prompt .message {
+    float:left;
+}
 .prompt textarea {
     display:block;
     width:100%;
+    float:left;
     height: 2.5em;
+    clear:both;
 }
 .menu {
     background-color:#000;
