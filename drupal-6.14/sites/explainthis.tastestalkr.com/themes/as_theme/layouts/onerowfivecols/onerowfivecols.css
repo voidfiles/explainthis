@@ -1,0 +1,4 @@
+.yui-gh .yui-u {width:19%;margin-left:1.2%;float:left;}
+.yui-gh .first {margin-left:0;} 
+.yui-gh:after {content:".";display:block;height:0;clear:both;visibility:hidden;}
+.yui-gh {zoom:1;}
