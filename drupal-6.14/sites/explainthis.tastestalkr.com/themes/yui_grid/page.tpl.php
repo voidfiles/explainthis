@@ -3,6 +3,8 @@
 <html>
 <head>
     <title><?PHP print $head_title; ?></title>
+    <meta name="google-site-verification" content="EWwf-mw-tQX6tNknIfv54u4V_Akt6NW79uNpeJCFPsc" />
+    <meta description="explainthis.org is a user driven forum for users to ask questions, and get answers through the work of journalism" /> 
     <?PHP print $head; ?>
     <?PHP print $styles; ?>
 </head>

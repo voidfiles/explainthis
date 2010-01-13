@@ -1,6 +1,10 @@
 <?php ?>
   <div class="node<?php if ($sticky) { print " sticky"; } ?><?php if (!$status) { print " node-unpublished"; } ?> clearfix margin_bottom_1em padding_bottom_halfem">
+    <?php if ($page) { ?>
     <h2 class="title s3 margin_bottom_1em"><?php print $title?></h2>
+    <?PHP } else { ?>
+    <h2 class="title s3"><a href="<?php print $node_url?>"><?php print $title?></a></h2>
+    <?PHP } ?>
     <div class="actions">
         <?php print $vote_storylink_via; ?>
         <?php print $vote_up_down; ?>

@@ -130,6 +130,12 @@ color: black;
     padding:0;
 }
 
+.block-similarterms .item-list ul li {
+    display:block;
+    float:left;
+    clear:both;
+    margin-bottom:1em;
+}
 
 .summary .tags {
     width:100%;
