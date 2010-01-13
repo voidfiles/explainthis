@@ -48,11 +48,13 @@ function as_tweaks_views_data_alter(&$views_data) {
 }
 
 // Term path handling. Could use taxonomy_redirect, but this is easier.
+/*
 function as_tweaks_term_path($term) {
   $t = taxonomy_get_term($term->tid);
   $term->name = $t->name;
-  return 'questions/taggged/' . urlencode($term->name);
+  return 'questions/tag/' . urlencode($term->name);
 }
+*/
 
 /**
  * Below, a bunch of simple hook implementations that award userpoints based
