@@ -18,4 +18,8 @@
             <?php echo $submitted; ?>
         </div>
     </div>
+    <div class="comments">
+        <?php echo $comments; ?>
+        <?php echo $comments_form; ?>
+    </div>
   </div>
