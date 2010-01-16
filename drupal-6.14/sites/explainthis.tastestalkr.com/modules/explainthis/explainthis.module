@@ -1,5 +1,8 @@
 <?PHP
 
+
+
+
 function explainthis_form_question_node_form_alter(&$form, $form_state){
     $form["title"]["#maxlength"] = 140;
     if($_GET["title"] && empty($form["title"]["#default_value"])){
@@ -11,11 +14,98 @@ function explainthis_form_question_node_form_alter(&$form, $form_state){
 
 }
 
-function explainthis_validate(&$node){
-    var_dump("hellow");
-    drupal_set_message('<h1>Hello</h1>'); 
-    if ($node->title && strlen($node->title) > 140 ) {
-      form_set_error('title', t('The max length of title is 140 Characters'));
+
+
+
+function leave_a_comment(){
+    global $user;
+    if ($_SERVER['HTTP_X_REQUESTED_WITH'] !== 'XMLHttpRequest' || $user->uid == 0){
+        return MENU_ACCESS_DENIED;
     }
+    
+    
+    $newNode = new stdClass();      // Construct the new node object.
+    $newNode->type = 'inline_comment';    // Your specified content type.
+    #node_object_prepare($newNode);
+    $newNode->title = "none";
+    $newNode->body  = $_REQUEST["comment"];
+    $newNode->uid   = $user->uid;
+    $newNode->created = strtotime("now");
+    $newNode->changed = strtotime("now");
+    $newNode->status = 1;
+    $newNode->comment = 0;
+    $newNode->promote = 0;
+    $newNode->moderate = 0;
+    $newNode->sticky = 0;
+    $newNode->field_node[0]["nid"] = $_REQUEST["nid"];
+    $newNode->field_user[0]["uid"] = $user->uid;
+
+    
+    node_save($newNode);
+
+    module_invoke_all('exit');
+    $ago = ago($newNode->created); 
+    $output = <<<HTML
+    <div class="comment">
+        <p>{$newNode->body}</p> 
+        <p class="by">by <a href="/user/{$user->uid}/{$user->name}">{$user->name}</a> {$ago}</p>
+    </div>
+HTML;
+    
+    echo $output;
+    die();
+}
+
+
+function explainthis_menu() {
+  $items = array();
+
+  $items['comments/js'] = array(
+    'title' => 'JS endpoint for simple inline comments',
+    'page callback' => 'leave_a_comment',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+
+  return $items;
+}
+// Hackey globak
+
+$wrapper_id = "";
+$current_nid = "";
+function simple_inline_comments_form($form_state){
+    global $wrapper_id,$current_nid;
+    $form = array();
+    $form['#attributes'] = array('id'=>'comment-form'.$current_nid,'class' => 'inline-comments-form');
+    $form['comment'] = array(
+      '#type' => 'textfield',
+      '#default_value' => t('Leave a Comment'), 
+      '#size' => 60
+    );
+    $form['nid'] = array(
+      '#type' => 'hidden', 
+      '#default_value' => $current_nid,
+    );
+
+    $form['submit'] = array(
+      '#type' => 'submit',
+      '#value' => t('Submit Your Comment'),
+      '#ahah' => array(
+            'path' => 'comments/js',
+            'wrapper' => $wrapper_id,
+            'method' => 'append',
+            'effect' => 'fade'
+          )
+    );
+    
+    return $form;
+}
+
+
+function simple_inline_comments($bad_id,$nid) {
+    global $wrapper_id,$current_nid;
+    $wrapper_id = $bad_id;
+    $current_nid = $nid;
+    return drupal_get_form('simple_inline_comments_form');
 }
 ?>

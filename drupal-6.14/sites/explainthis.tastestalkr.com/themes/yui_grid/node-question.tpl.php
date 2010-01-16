@@ -21,6 +21,31 @@
             <?php echo $submitted; ?>
         </div>
     </div>
+    <div class="comments">
+        <div id="<?php echo $nid; ?>-comments" class="all-comments">
+        <?PHP
+            $view = views_get_view('inline_comments_for');
+            $view->set_arguments(array($nid));
+            $view->execute();
+            if (count($view->result)) {
+                foreach($view->result as $comment ){
+                    $node = node_load($comment->nid);
+                    ?>
+                    <div class="comment">
+                        <p><?php echo $node->body; ?></p> 
+                        <p class="by">by <a href="/user/<?php echo $node->uid ?>/<?php echo $node->name; ?>"><?php echo $node->name; ?></a> <?php echo ago($node->created); ?></p>
+                    </div>
+                    <?PHP
+                }
+
+            }
+        
+        ?>
+        </div>
+        <?PHP if($logged_in):?>
+        <?php echo simple_inline_comments($nid . "-comments", $nid); ?>
+        <?PHP endif;?>
+    </div>
     <?php
         if($node->comment_count == 1){
             $subtitle = " answer";

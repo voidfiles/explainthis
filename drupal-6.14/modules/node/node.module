@@ -814,10 +814,9 @@ function node_validate($node, $form = array()) {
  */
 function node_submit($node) {
   global $user;
-
+  print_r($node);
   // Convert the node to an object, if necessary.
   $node = (object)$node;
-
   // Generate the teaser, but only if it hasn't been set (e.g. by a
   // module-provided 'teaser' form item).
   if (!isset($node->teaser)) {

@@ -385,8 +385,37 @@ ul.tabs li a {
     padding:5px;
     margin:0 3px 0 0;
 }
-           
-           
+
+.comments {
+    width:100%;
+    clear:both;
+}
+.all-comments {
+    float:right;
+    width:60%;
+    padding:2px;
+}
+.comment {
+    border-bottom:1px solid #ccc;
+    background-color:#eee;
+    width:100%;
+} 
+.comment .by {
+    text-align:right;
+}
+.comment p {
+    padding:2px;
+}
+.inline-comments-form{
+    text-align:right;
+}       
+.inline-comments-form label, .inline-comments-form input {
+    display:inline;
+    clear:none;
+}    
+.inline-comments-form .form-text {
+    width:59%;
+}
 .gray_to_white {
     background:#fff;
     background: -webkit-gradient(linear, left top, left bottom, from(#00abeb), to(#fff), color-stop(0.5, #fff), color-stop(0.5, #66cc00));

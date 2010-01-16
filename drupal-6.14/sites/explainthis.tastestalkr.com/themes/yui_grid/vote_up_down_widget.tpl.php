@@ -15,7 +15,7 @@
 <div class="vote-up-down-widget">
     <?php if($logged_in): ?>
     <span id="vote_up_<?php print $cid; ?>" class="vote_up <?php print $class1; ?>" title="<?php print $title1; ?>">
-        <a href="<?php print $title1; ?>" class="s4" title="vote up">&#9650;</a>
+        <a href="<?php print $title1; ?>" class="s5" title="vote up">Up</a>
     </span>
     <?php endif; ?>
     <span class="points s3">
@@ -24,7 +24,7 @@
     </span>
     <?php if($logged_in): ?>
     <span id="vote_down_<?php print $cid; ?>" class="vote_down <?php print $class2; ?>" title="<?php print $title2; ?>">
-        <a href="<?php print $title2; ?>" class="s4" title="vote down">&#9660;</a>
+        <a href="<?php print $title2; ?>" class="s5" title="vote down">Down</a>
     </span>
     <?php endif; ?>
 </div>
