@@ -252,31 +252,35 @@ ul li {
     clear: none;
     margin: 0;
 }
-.menu {
+
+
+.menu, ul.tabs {
     display:block;
     margin-bottom:0;
     margin-left:0;
 }
-.menu li {
+.menu li, ul.tabs li {
     display:block;
     float:left;
+    clear:none;
     margin-top:.125em;
     margin-bottom:.06125em;
     
 }
-ul.menu li {
+ul.menu li, ul.tabs li {
     margin-top:.125em;
     margin-bottom:.06125em;
 }
-.menu li a{
-    width:100%;
+.menu li a, ul.tabs li a{
+    /*width:100%;*/
     background-color:#000;
     color:#fff;
     padding:.1em .2em;
+    border: none;
     
 }
 
-.menu li a:hover {
+.menu li a:hover,ul.tabs li a:hover, ul.tabs li.active a {
     background-color:#fff;
     color:#000;
     background-image: -moz-linear-gradient(top, #CCC, #FFF);
@@ -286,8 +290,31 @@ ul.menu li {
 
 }
 
+ul.tabs {
+    /*background-color:#000;
+    padding: .25em 0 .5em .25em;*/
+    font-size:125%;
+}
+ul.tabs li {
+    background-color:#EEE;
+    color:#000;
+    border-color:#BBBBBB;
+    border-style:solid;
+    border-width: 1px 1px 0 1px;
+    margin: 0 1em 0 0;
+    
+}
+ul.tabs li a {
+    width:100%;
+    margin:0;
+    background-color:#eee;
+    color:#000;
+}
 .block .menu {
     background-color:#fff;
+}
+.block .menu li {
+    width:100%;
 }
 .block .menu li a{
     background-color:#FFF;
@@ -303,6 +330,15 @@ ul.menu li {
     margin-right:4em;
 }
 
+.content ul.tabs {
+    background-color:#000;
+    padding:0;
+}
+
+.content ul.tabs li,.content ul.tabs li {
+    background-color:#FFF;
+    padding:0;
+}
 .vote-up-down-widget{
     text-align:center;
     width:100%;
@@ -432,4 +468,4 @@ ul.menu li {
 
 
 
-.clearfix:after{content:".";display:block;height:0;clear:both;visibility:hidden;} 
+.clearfix:after,.tabs:after{content:".";display:block;height:0;clear:both;visibility:hidden;} 

@@ -1,8 +1,6 @@
 <?php ?>
-  <div class="node<?php if ($sticky) { print " sticky"; } ?><?php if (!$status) { print " node-unpublished"; } ?> clearfix margin_bottom_1em padding_bottom_halfem">
-    <?php if ($page) { ?>
-    <h2 class="title s3 margin_bottom_1em"><?php print $title?></h2>
-    <?PHP } else { ?>
+  <div class="node<?php if ($sticky) { print " sticky"; } ?><?php if (!$status) { print " node-unpublished"; } ?> clearfix margin_bottom_1em padding_bottom_halfem margin_top_1em">
+    <?php if (!$page) { ?>
     <h2 class="title s3"><a href="<?php print $node_url?>"><?php print $title?></a></h2>
     <?PHP } ?>
     <div class="actions">
@@ -11,7 +9,7 @@
         <?php echo $node->links["flag-favorite"]["title"]; ?>
         <!--<a href="#" class="checkmark s3" title="Check this to keep track of this question.">&#x272D;</a>-->
     </div>
-    <div class="content s6 margin_bottom_1em"><?php print $node->content["body"]["#value"]; ?></div>
+    <div class="content s6 margin_bottom_1em margin-top"><?php print $node->content["body"]["#value"]; ?></div>
     <div class="context clearfix">
         <div class="tags context_item">
             <?php echo $terms; ?>

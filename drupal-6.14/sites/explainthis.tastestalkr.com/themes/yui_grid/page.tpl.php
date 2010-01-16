@@ -36,6 +36,8 @@
                 <div class="yui-g">
                     <?php print $in_above_content; ?>
                     <?php if($messages) { ?><?php print $messages; ?><?php }?>
+                    <?php if($title) { ?><h2 class="s3"><?php print $title; ?></h2><?php }?>
+                    <?php if($tabs) { ?><?php print $tabs; ?><?php }?>
                     <?php print $content; ?>
                     <?php print $in_below_content; ?>
                 </div>
