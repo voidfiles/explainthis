@@ -51,7 +51,7 @@ function leave_a_comment(){
         <p class="by">by <a href="/user/{$user->uid}/{$user->name}">{$user->name}</a> {$ago}</p>
     </div>
 HTML;
-    
+    $output = json_encode($output);
     echo $output;
     die();
 }
