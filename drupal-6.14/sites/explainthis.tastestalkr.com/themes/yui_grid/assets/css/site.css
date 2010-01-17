@@ -416,6 +416,20 @@ ul.tabs li a {
 .inline-comments-form .form-text {
     width:59%;
 }
+.inline-comments-form .progress-disabled{
+    float:none;
+}
+
+.inline-comments-form .ahah-progress .throbber {
+  display:inline-block;
+  float:none;
+}
+
+
+.inline-comments-form .ahah-progress {
+   display:inline-block;
+   float:none;
+}
 .gray_to_white {
     background:#fff;
     background: -webkit-gradient(linear, left top, left bottom, from(#00abeb), to(#fff), color-stop(0.5, #fff), color-stop(0.5, #66cc00));
