@@ -160,6 +160,7 @@ color: black;
 
 /* Node */
 .node .actions {float:left;width:50px;}
+.node .actions p {text-align:center;}
 .node .content, .node .context {margin-left:60px;}
 
 .content p {

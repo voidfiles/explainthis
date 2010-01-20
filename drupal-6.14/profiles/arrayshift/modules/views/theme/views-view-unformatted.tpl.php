@@ -15,3 +15,8 @@
     <?php print $row; ?>
   </div>
 <?php endforeach; ?>
+  <?php if ($feed_icon): ?>
+      <div class="feed-icon">
+            <?php print $feed_icon; ?>
+	        </div>
+		  <?php endif; ?>
