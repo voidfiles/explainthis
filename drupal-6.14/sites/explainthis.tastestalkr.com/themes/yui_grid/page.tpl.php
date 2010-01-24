@@ -1,6 +1,6 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
  "http://www.w3.org/TR/html4/strict.dtd">
-<html>
+<html xmlns:fb="http://www.facebook.com/2008/fbml">
 <head>
     <title><?PHP print $head_title; ?></title>
     <meta name="google-site-verification" content="EWwf-mw-tQX6tNknIfv54u4V_Akt6NW79uNpeJCFPsc" />
