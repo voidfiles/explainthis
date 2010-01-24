@@ -26,7 +26,11 @@ a:hover {
 color: black;
 }
 
-
+.view-as-tags .views-row {
+   margin-left:1.5em;
+   margin-top:.25em;
+   margin-bottom:.5em;
+}
 .prompt {
     background-color:#ddd;
     padding:10px 20px;
@@ -120,6 +124,9 @@ color: black;
 /* Tags */
 .tags ul li {
     display:inline;
+}
+.tags .item-list {
+   margin-right:200px
 }
 .item-list ul li {
     list-style-image:none;
