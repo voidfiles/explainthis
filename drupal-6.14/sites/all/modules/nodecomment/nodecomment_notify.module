@@ -179,7 +179,7 @@ function _nodecomment_notify_mailalert($comment) {
   $nid = $comment->comment_target_nid;
   $cid = $comment->nid;
 
-  print "<h1 class='s2'>We are going to send an email</h1>";
+  #print "<h1 class='s2'>We are going to send an email</h1>";
   // Check to see if a notification has already been sent for this
   // comment so that edits to a comment don't trigger an additional
   // notification.

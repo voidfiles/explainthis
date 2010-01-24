@@ -524,7 +524,7 @@ function nodecomment_nodeapi(&$node, $op, $arg = 0, $page = 0) {
   // When the node IS a comment
   //   -- delete any children comments
   //   -- update node_comment_statistics for the parent node
-  print "<h1 class='s2'>".$op."We are going to send an email</h1>";
+  # print "<h1 class='s2'>".$op."We are going to send an email</h1>";
 
   switch ($op) {
     case 'load':

@@ -15,7 +15,40 @@ function explainthis_form_question_node_form_alter(&$form, $form_state){
 }
 
 
+/**
+ * Impletementation of hook_form_alter.
+ */
+function explainthis_form_alter(&$form, $form_state, $form_id) {  
+  #print "<h1 class=\"s2\">" . $form_id . "</h2>";
+  // Facebook feed checkbox on comment form.
+  if ($form_id == 'question_node_form' && fbconnect_get_fbuid()) {
+    $favicon = '<img src="http://wiki.developers.facebook.com/images/1/17/Connect_light_small_short.gif" />';
+    $form['fbconnect_feed'] = array(
+      '#type' => 'checkbox',
+      '#title' => $favicon. t(' Publish To Facebook'),
+      '#default_value' => 1,
+      '#weight' => 0,
+    );
+    $form['#submit'][] = 'explainthis_question_feed_submit';
+  }
+}
 
+/**
+ * Stock informations used by the facebook feed javascript function.
+ */
+function explainthis_question_feed_submit($form, &$form_state) {
+
+  if ($form_state['values']['fbconnect_feed']) {
+   $node = node_load($form_state['values']['nid']);
+   
+   $_SESSION['fbconnect_feed'] = array(
+      'type' => 'question',
+      'comment' => $form_state['values']['body'],
+      'title' => $form_state['values']['title'],
+      'nodeurl' => url('node/'.$node->nid, array('absolute' => TRUE)),
+   );
+  }
+}
 
 function leave_a_comment(){
     global $user;

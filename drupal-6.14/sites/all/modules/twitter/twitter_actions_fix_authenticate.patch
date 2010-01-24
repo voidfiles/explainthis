@@ -1,0 +1,16 @@
+diff -r 1a3fbeeca686 sites/all/modules/twitter/twitter_actions/twitter_actions.module
+--- a/sites/all/modules/twitter/twitter_actions/twitter_actions.module	Tue Sep 08 19:38:42 2009 -0400
++++ b/sites/all/modules/twitter/twitter_actions/twitter_actions.module	Tue Sep 08 20:33:27 2009 -0400
+@@ -75,9 +75,10 @@
+   $pass = $form_state['values']['password'];
+   $name = $form_state['values']['screen_name'];
+ 
+-  module_load_include('inc', 'twitter');
++  module_load_include('lib.php', 'twitter');
+ 
+-  $valid = twitter_authenticate($name, $pass);
++  $twitter = new Twitter($name, $pass);
++  $valid = $twitter->verify_credentials();
+   if (!$valid) {
+     form_set_error('password', t('Twitter authentication failed. Please check your account name and try again.'));
+   }

@@ -345,30 +345,68 @@ function fbconnect_render_js() {
     
     switch ($feed['type']) {
       case 'comment' :
-        $bundle_id = variable_get('fbconnect_com_feed_id', FBCONNECT_COMMENT_FEED_BUNDLEID);
-        $feed_js   = 'var template_data = {"sitename":'. $site .',
-                        "siteurl" : '. $escaped_urL .',
-                        "title" : '. $feed['title'] .',
-                        "article_url" : '. $feed['nodeurl'] .'
-                      };';
-        $feed_js  .= 'var body = '. $feed['comment'] .';';
+        $attachment = array(
+            "name" => $feed['title'],
+            "href" => $feed['nodeurl'],
+            "caption" => '{*actor*} commented on post',
+            "description" => $feed['comment']
+        );
+        $action_links = array(
+            'text'=>'View on ExplainThis.org', 
+            'href'=>$feed['nodeurl']
+        );  
       break;
       
-      case 'register' :
-        $bundle_id = variable_get('fbconnect_reg_feed_id', FBCONNECT_REG_FEED_BUNDLEID);          
-        $feed_js   = 'var template_data = {"sitename":'. $site .', "siteurl" : '. $escaped_urL .'};'; 
-        $feed_js  .= 'var body = null;'; 
-        /*
-          TODO ajouter un champ body utile
-        */     
+      case 'register' :        
+        $attachment = array(
+            "name" => $site,
+            "href" => $escaped_urL,
+            "caption" => '{*actor*} signed-up at explainthis.org'
+        );  
+        $action_links = array(
+            'text'=>'Signup too', 
+            'href'=>$escaped_urL
+        ); 
+      break;
+      case 'answer' :        
+          $attachment = array(
+              "name" => $feed['title'],
+              "href" => $feed['nodeurl'],
+              "caption" => '{*actor*} answered a question on explainthis.org',
+              "description" => $feed['comment']
+          );
+          $action_links = array(
+              'text'=>'See the answer', 
+              'href'=>$feed['nodeurl']
+          );
+      break;
+      case 'question' :        
+          $attachment = array(
+              "name" => $feed['title'],
+              "href" => $feed['nodeurl'],
+              "caption" => '{*actor*} asked this question on explainthis.org',
+              "description" => $feed['comment']
+          );
+          $action_links = array(
+              'text'=>'See the answer', 
+              'href'=>$feed['nodeurl']
+          );
       break;
     }
+
+    $attachment = json_encode($attachment);
+    $action_links = json_encode($action_links);
     
-    drupal_add_js('$(document).ready(function() {
-      FB.Bootstrap.requireFeatures(["Connect"], function() { ' .$feed_js. '
-          FB.Connect.showFeedDialog('. $bundle_id .', template_data, null, body);
-      });
-    });', 'inline', 'footer');
+    $fb_js = <<<JAVASCRIPT
+        $(document).ready(function() {
+          FB.Bootstrap.requireFeatures(["Connect"], function() {
+              var attachment = {$attachment};
+              var action_links = {$action_links};
+              FB.Connect.streamPublish("", attachment, action_links);
+          });
+        });
+JAVASCRIPT;
+    drupal_add_js($fb_js, 'inline', 'footer');
     
     unset($_SESSION['fbconnect_feed']);
   }

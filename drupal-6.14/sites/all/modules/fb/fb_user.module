@@ -1,0 +1,859 @@
+<?php
+  // $Id: fb_user.module,v 1.50 2010/01/15 21:44:31 yogadex Exp $
+
+/**
+ * @file
+ * 
+ * This module allows Drupal user records to be associated with Facebook user
+ * ids.  It can create local user accounts when Facebook users visit an
+ * application's canvas pages.
+ */
+
+define('FB_USER_OPTION_CREATE_NEVER', 1);
+define('FB_USER_OPTION_CREATE_LOGIN', 2);
+
+define('FB_USER_OPTION_MAP_NEVER', 1);
+define('FB_USER_OPTION_MAP_ALWAYS', 2);
+
+/**
+ * Implementation of hook_perm().
+ */
+function fb_user_perm() {
+  return array('delete own fb_user authmap');
+}
+
+/**
+ * Returns configuration for this module, on a per-app basis.
+ */
+function _fb_user_get_config($fb_app) {
+  $fb_app_data = fb_app_get_data($fb_app);
+  $fb_user_data = $fb_app_data['fb_user'] ? $fb_app_data['fb_user'] : array();
+
+  // Merge in defaults
+  $fb_user_data += array(
+    'create_account' => FB_USER_OPTION_CREATE_LOGIN,
+    'map_account' => FB_USER_OPTION_MAP_ALWAYS,
+  );
+  return $fb_user_data;
+}
+
+/**
+ * There are several pages where we don't want to automatically create a new
+ * account or use an account configured for this app.
+ */
+function _fb_user_special_page() {
+  // TODO: hopefully this can be simplified.
+  return ((arg(0) == 'user' && arg(1) == 'login') ||
+          (arg(0) == 'user' && arg(1) == 'register') || 
+          arg(0) == 'fb_user' ||
+          (arg(0) == 'fb' && arg(1) == 'form_cache') ||
+          (arg(0) == 'fb_app' && arg(1) == 'event') ||
+          (arg(0) == 'fb_connect' && arg(1) == 'receiver'));
+}
+
+/**
+ * Keep track of when the user has visited the app, and whether they've
+ * authorized the app or not.
+ */
+function _fb_user_track($fb, $fb_app, $account) {
+  // Keep track of all our app users.  We need this info when updating
+  // profiles during cron.  We keep session keys in case user has an
+  // infinite session, and we can actually log in as them during cron.
+  
+  // In special cases, do not modify the uid column.
+  $fb_user_data = _fb_user_get_config($fb_app);
+  
+  $uid = 0;
+  if (!$account->uid || $account->uid == $fb_user_data['not_logged_in_uid'] || $account->uid == $fb_user_data['logged_in_uid']) {
+    // Keep data for fbu, even if we do not know uid.
+    $result = db_query("UPDATE {fb_user_app} SET time_access=%d, session_key='%s', session_key_expires=%d, uid=NULL WHERE apikey='%s' AND fbu=%d",
+                       time(), $fb->api_client->session_key, $fb->session_expires,
+                       $fb_app->apikey, fb_facebook_user($fb));
+    
+  }
+  else {
+    // Uid is accurate.
+    $uid = $account->uid;
+    $result = db_query("UPDATE {fb_user_app} SET time_access=%d, session_key='%s', session_key_expires=%d, uid=%d WHERE apikey='%s' AND fbu=%d",
+                       time(), $fb->api_client->session_key, $fb->session_expires,
+                       $account->uid,
+                       $fb_app->apikey, fb_facebook_user($fb));
+  }
+  if ($result && !db_affected_rows()) {
+    // The row for this user was never inserted, or deleted.  Insert now.
+    $fbu = fb_facebook_user($fb);
+    if ($fbu) {
+      $info = fb_users_getInfo(array($fbu), $fb);
+      $data = $info[0];
+      $result = db_query("INSERT INTO {fb_user_app} (apikey, fbu, added, session_key, session_key_expires, time_access, uid, proxied_email, time_cron) VALUES ('%s', %d, %d, '%s', %d, %d, %d, '%s', %d)",
+                         $fb_app->apikey, $fbu,
+                         $data['is_app_user'],
+                         $fb->session_key, $fb->session_key_expires,
+                         time(),
+                         $uid,
+                         $data['proxied_email'],
+                         0 // time_cron
+      );
+    }
+  }
+  if ($result === FALSE) {
+    watchdog('fb_user', "Failed to update fb_user_app table.", array(), WATCHDOG_ERROR);
+  }
+}
+
+/**
+ * Implementation of hook_fb.
+ */
+function fb_user_fb($op, $data, &$return) {
+  $fb_app = isset($data['fb_app']) ? $data['fb_app'] : NULL;
+  $fb = isset($data['fb']) ? $data['fb'] : NULL;
+
+  global $user;
+
+  if ($fb_app) {
+    $fb_user_data = _fb_user_get_config($fb_app);
+  }
+  
+  if ($op == FB_OP_POST_INIT) {
+    // Observe special rules for canvas page users without local accounts
+    if (!$user->uid && !_fb_user_special_page() && !isset($_REQUEST['form_id'])) {
+      if ($fbu = fb_facebook_user($fb) && fb_api_check_session($fb) && !$fb->api_client->users_isAppUser()) {
+        $uid = $fb_user_data['logged_in_uid'];
+      }
+      else if (isset($fb_user_data['fb_user'])) {
+        $uid = $fb_user_data['fb_user']['not_logged_in_uid'];        
+      }
+      if (isset($uid)) {
+        $account = user_load(array('uid' => $uid));
+        // Be careful on maintenance pages.
+        if (!variable_get('site_offline', FALSE) || user_access('administer site configuration', $account)) {
+          $user = $account;
+          if (fb_verbose() === 'extreme')
+            watchdog("fb_user", "fb_user_fb changing user to $uid"); // debug
+        }
+      }
+    }
+    // TODO: is it now necessary to redirect the user back to current page?
+
+  }
+  else if ($op == FB_OP_APP_IS_AUTHORIZED) {
+    // We reach this point if the user has authorized the app.
+    // Could be they visited a canvas page,
+    // or could be they clicked a fbConnect link.
+    
+    $fbu = $data['fbu']; // The user id on facebook.
+    $valid_session = fb_api_check_session($fb);
+    
+    // Ensure authmap table in sync.  In case settings have changed or entry was manually deleted.
+    if ($user->uid != 0 &&
+        $user->uid != $fb_user_data['logged_in_uid'] &&
+        $fb_user_data['map_account'] == FB_USER_OPTION_MAP_ALWAYS &&
+        $valid_session) {
+      // Use session to avoid this logic on every request.
+      if (!isset($_SESSION['fb_user'][$fb_app->apikey]['authmap'])) {
+        _fb_user_set_authmap($fb_app, $fbu, $user);
+        $_SESSION['fb_user'][$fb_app->apikey]['authmap'] = TRUE;
+      }
+    }
+    
+    // Remember the original uid
+    $original_uid = $user->uid;
+    
+    if ((!isset($user->fbu) || $user->fbu != $fbu) && 
+        $valid_session) {
+      // Try the application-specific account.
+      $account = user_external_load("$fbu-$fb_app->apikey@facebook.com");
+      if (!$account) {
+	// Try the cross-application account.
+	$account = user_external_load("$fbu@facebook.com");
+      }
+
+      if ($account) {
+	$account->fbu = $fbu;
+	if ($user->uid == 0) {
+          
+          // Honoring facebook accounts on admin pages causes problems.
+          if (!variable_get('site_offline', FALSE) || user_access('administer site configuration', $account)) {
+            
+            if (fb_verbose() === 'extreme')
+              watchdog("fb_user", "fb_user_fb changing user to $account->uid");
+            $user = $account; // change the global user
+          }
+        }
+	else if ($user->uid != $account->uid) {
+	  watchdog('fb_user', 'fb_user encountered something it cannot handle.  The current user, !user1 is logged in.  But the facebook user id %fbu is associated with another user, !user2',
+                   array('!user1' => l($user->name, 'user/' . $user->uid),
+                         '!user2' => l($account->name, 'user/' . $account->uid),
+                         '%fbu' => $fbu),
+		   WATCHDOG_ERROR);
+	}
+      }
+    }
+    
+    // Check if the local account needs to be made.
+    if (!variable_get('site_offline', FALSE) && 
+        $user->fbu != fb_facebook_user($fb) && 
+        (!_fb_user_special_page()) && 
+        $valid_session) {
+      if (($fb_user_data['create_account'] == FB_USER_OPTION_CREATE_ADD &&
+           $fb->api_client->users_isAppUser()) ||
+          ($fb_user_data['create_account'] == FB_USER_OPTION_CREATE_LOGIN)) {
+	// We need to make a local account for this facebook user.
+	$user = fb_user_create_local_user($fb, $fb_app, fb_facebook_user($fb), 
+					  array('app_specific' => $fb_user_data['unique_account'],
+						'roles' => array($fb_user_data['new_user_rid'] => TRUE),
+                                          ));
+	watchdog('fb_user', t("Created new user !username for application %app" . print_r(array('session_name' => session_name(), 'session_id' => session_id()), 1),
+			      array('!username' => l($user->name, 'user/' . $user->uid),
+				    '%app' => $fb_app->label)));
+	
+      }
+    }
+      
+    // It's possible the user was already created by another app.
+    // In this case we need to add our role.
+    if ($user->fbu == fb_facebook_user() &&
+	$fb_user_data['new_user_rid'] && !$user->roles[$fb_user_data['new_user_rid']]) {
+      // there should be an API for this...
+      db_query('INSERT INTO {users_roles} (uid, rid) VALUES (%d, %d)', 
+	       $user->uid, $fb_user_data['new_user_rid']);
+      watchdog('fb_user', "Added role %role to existing user !username for application %app",
+               array('!username' => theme('username', $user),
+                     '%app' => $fb_app->label,
+                     '%role' => $fb_user_data['new_user_rid']));
+    }
+    
+    if ($user->uid != $original_uid &&
+        !(arg(0) == 'fb_app' && arg(1) == 'event')) {
+      // We've changed the user.  In order to ensure that drupal handles
+      // permissions properly, the user must make the request all over
+      // again.  Skip this for the profile tab, as facebook does not allow
+      // redirects (or persistent session) there.
+      if ((fb_is_fbml_canvas() || fb_is_iframe_canvas()) &&
+	  (!isset($_REQUEST['fb_sig_in_profile_tab']) || !$_REQUEST['fb_sig_in_profile_tab'])) {
+	
+	// Redirect to a canvas page
+	$url = fb_canvas_fix_url(url(fb_scrub_urls($_REQUEST['q']), array('absolute' => TRUE)), $fb_app);
+	if (fb_verbose()) 
+	  watchdog('fb_debug', "User uid is now {$user->uid} (was {$original_uid}), redirecting canvas to $url to ensure permissions are correct."); // debug
+	$fb->redirect($url);
+      }
+      else if (FALSE && !fb_settings(FB_SETTINGS_APP_NID)) { // deprecated.  fb_connect.js will do the redirect. right? ??? XXX
+        // Facebook connect pages (not callback or receiver)
+        $path = isset($_REQUEST['q']) ? $_REQUEST['q'] : '<front>';
+	if (fb_verbose())
+	  watchdog('fb_debug', "User uid is now {$user->uid} (was {$original_uid}), redirecting to $path to ensure permissions are correct."); // debug
+        drupal_goto($path);
+      }
+    }
+    
+    // Keep a record of when user accesses app.
+    _fb_user_track($fb, $fb_app, $user);
+    
+  }
+  else if ($op == FB_OP_GET_FBU) {
+    // This is a request to learn the user's FB id.
+    $return = _fb_user_get_fbu($data['uid'], $fb_app);
+  }
+  else if ($op == FB_OP_GET_USER_SESSION) {
+    // The fb module is asking for session login information.  For example, to
+    // log in as the user when not on a canvas page.  This module may be able
+    // to provide it, depending on whether the user has logged in, and whether
+    // the session has expired.
+    $fbu = $data['fbu'];
+    $result = db_query("SELECT * FROM {fb_user_app} WHERE apikey = '%s' and fbu = %d AND session_key_expires > %d", $fb_app->apikey, $fbu, time());
+    $data = db_fetch_object($result);
+    if ($data && $data->session_key)
+      // Return array with FB id and apikey.
+      $return = array($data->fbu, $data->session_key);
+  }
+  else if ($op == FB_APP_OP_EVENT) {
+    // Facebook has notified us of some event.
+    // We handle some of the events here.
+    $event_type = $data['event_type'];
+
+    // Ensure fb_user_app table accurately reflects whether user has authorized.
+    
+    if ($event_type == FB_APP_EVENT_POST_AUTHORIZE) {
+      // User has authorized us to know some details about her.
+      $fbu = fb_facebook_user($fb);
+      $proxied_email = fb_user_get_proxied_email($fbu, $fb_app);
+      
+      // If user has authorized then later removed, there will be a row we can replace
+      db_query("DELETE FROM {fb_user_app} WHERE apikey = '%s' AND fbu = %d", $fb_app->apikey, $fbu);
+      
+      db_query("INSERT INTO {fb_user_app} (apikey, fbu, uid, added, session_key, session_key_expires, time_cron, time_access, proxied_email) VALUES ('%s', %d, %d, 1, '%s', %d, %d, %d, '%s')",
+               $fb_app->apikey, $fbu,
+               $user->uid ? $user->uid : 0,
+               $fb->api_client->session_key, $fb->session_expires,
+               0, // time_cron
+               time(), // time_access
+               $proxied_email
+      );
+    }
+    else if ($event_type == FB_APP_EVENT_POST_REMOVE) {
+      // User has removed the app from their account.
+      // Should we delete the row here???
+      db_query("UPDATE {fb_user_app} SET added=0, session_key=NULL, session_key_expires=NULL WHERE apikey='%s' AND fbu=%d",
+               $fb_app->apikey, fb_facebook_user($fb));
+    }
+  }
+}
+
+function fb_user_form_alter(&$form, &$form_state, $form_id) {
+  // Add our settings to the fb_app edit form.
+  if (isset($form['fb_app_data'])) {
+    $node = $form['#node'];
+    $fb_user_data = _fb_user_get_config($node->fb_app);
+    
+    $form['fb_app_data']['fb_user'] = array('#type' => 'fieldset',
+                                            '#title' => t('Facebook user settings'),
+                                            '#tree' => TRUE,
+                                            '#collapsible' => TRUE,
+                                            '#collapsed' => TRUE,
+    );
+        
+    $form['fb_app_data']['fb_user']['create_account'] = 
+      array('#type' => 'radios',
+            '#title' => t('Create Local Account'),
+            '#description' => t('This option will create a local account automatically and create an entry in the authmap table.  Choose never to use Drupal\'s built in user registration.'),
+            '#options' => array(FB_USER_OPTION_CREATE_NEVER => t('Never (user/register page will still work)'),
+                                FB_USER_OPTION_CREATE_LOGIN => t('If user has logged in'),
+            ),
+            '#default_value' => $fb_user_data['create_account'],
+            '#required' => TRUE,
+      );
+
+    $form['fb_app_data']['fb_user']['map_account'] =
+      array('#type' => 'radios',
+            '#title' => t('Map Accounts'),
+            '#description' => t('Mapping an account means creating an entry in the authmap table.  This entry allows Drupal to know which Facebook id corresponds to which local uid.'),
+            '#options' => array(FB_USER_OPTION_MAP_NEVER => t('Never map accounts'),
+                                FB_USER_OPTION_MAP_ALWAYS => t('Map account when both local uid and Facebook id are known'),
+            ),
+            '#default_value' => $fb_user_data['map_account'],
+            '#required' => TRUE,
+      );
+
+    $form['fb_app_data']['fb_user']['unique_account'] =
+      array('#type' => 'checkbox',
+            '#title' => t('Make Account Mapping Unique (experimental, not recommended)'),
+            '#description' => t('If checked, the relationship between the local uid and the Facebook id applies only to this Application.  This matters only when you host more than one application on this instance of Drupal.'),
+            '#default_value' => $fb_user_data['unique_account'],
+      );
+    
+    
+    // TODO: prompt for role with a select.  Don't make user figure out id
+    $form['fb_app_data']['fb_user']['new_user_rid'] =
+      array('#type' => 'select',
+            '#title' => t('New user role'),
+            '#options' => user_roles(1),
+            '#description' => t('When the local uid is known and the user has logged in (in the Facebook sense) to the app, the user will be granted this role.'),
+            '#default_value' => $fb_user_data['new_user_rid'],
+      );
+    
+    // Experimental.  May be removed or drastically changed anytime
+    // TODO: fix this so that it prompts for username with autocomplete, not a uid.
+    $form['fb_app_data']['fb_user']['not_logged_in_uid'] =
+      array('#type' => 'textfield',
+            '#title' => t('Not logged in user (uid)'),
+            '#description' => t('If allowing non-logged in users, when such a user visits the site, which Drupal user should they be treated as?  Use 0 for the anonymous user (recommended - this feature is experimental and likely to disappear).'),
+            '#default_value' => $fb_user_data['not_logged_in_uid'],
+      );
+    $form['fb_app_data']['fb_user']['logged_in_uid'] =
+      array('#type' => 'textfield',
+            '#title' => t('Logged in user (uid)'),
+            '#description' => t('If allowing logged in users, when such a user visits the site, and they do not have a local Drupal account, which Drupal user should they be treated as?  Use 0 for the Anonymous user (recommended - this feature is experimental and likely to disappear), or create a dedicated account for this purpose.'),
+            '#default_value' => $fb_user_data['logged_in_uid'],
+      );
+    
+ 
+  }
+  else if ($form_id == 'user_edit' && ($app = $form['#fb_app'])) {
+    // Disable buttons on user/edit/app pages, nothing to submit
+    unset($form['submit']);
+    unset($form['delete']);
+  }
+  else if ($form_id == 'user_profile_form') {
+    // On user/edit, hide proxied email
+    if (isset($form['account']) && isset($form['account']['mail'])) {
+      $account = $form['_account']['#value'];
+      if (isset($account->fb_user_proxied_mail) &&
+          ($form['account']['mail']['#default_value'] == $account->fb_user_proxied_mail)) {
+        unset($form['account']['mail']['#default_value']);
+      } 
+    }
+  
+    
+  }
+}
+
+/**
+ * Learn the user's proxied email address.
+ * http://wiki.developers.facebook.com/index.php/Proxied_Email
+ */
+function fb_user_get_proxied_email($fbu, $fb_app) {
+  // Try to learn from local database
+  $result = db_query("SELECT * FROM {fb_user_app} WHERE apikey='%s' AND fbu=%d",
+                     $fb_app->apikey,
+                     $fbu);
+  if ($data = db_fetch_object($result)) {
+    $mail = $data->proxied_email;
+  }
+  
+  if (!$mail) {
+    // Ask facebook for info.
+    $fb = fb_api_init($fb_app);
+    $info = fb_users_getInfo(array($fbu), $fb);
+    $data = $info[0];
+    $mail = $data['proxied_email'];
+    if ($mail) {
+      // Store locally.
+      $result = db_query("UPDATE {fb_user_app} SET proxied_email='%s' WHERE apikey='%s' AND fbu=%d",
+                         $mail, $fb_app->apikey, $fbu);
+    }
+  }
+  return $mail;
+}
+
+
+/**
+ * Helper function for menu item access check.
+ */
+function fb_user_access_own($account, $perm, $allow_admin) {
+  if ($GLOBALS['user']->uid == $account->uid && user_access($perm)) {
+    return TRUE;
+  }
+  else if ($allow_admin) {
+    return user_access('administer users');
+  }
+}
+
+/**
+ * Implementation of hook_user.
+ */
+function fb_user_user($op, &$edit, &$account, $category = NULL) {
+  global $user;
+  static $apps;
+  
+  // If form posted from an FBML canvas page, we learn the app and fbu from the post.
+  // TODO: do we need additional validation here? (i.e. an fb_api_init to confirm the facebook params?)
+  if (!empty($_REQUEST['fb_sig'])) {
+    //watchdog('debug', print_r($_REQUEST, 'fb_user_user request'));
+    $fb_app = fb_get_app(array('apikey' => $_REQUEST['fb_sig_api_key']));
+    $fbu = isset($_REQUEST['fb_sig_user']) ? $_REQUEST['fb_sig_user'] : NULL;
+  }
+  else if (!empty($GLOBALS['fb'])) {
+    // Post from iframe, or facebook connect page, or canvas page.
+    $fbu = fb_facebook_user();
+    $fb_app = $GLOBALS['fb_app'];
+  }
+  
+  if (!empty($fb_app) && $op == 'load' && $account->uid) {
+    if (!$account->mail) {
+      // Use proxied email, if facebook app is active and user uses it.
+      // TODO: confirm drupal never saves proxied address to users.mail.
+      $account->mail = fb_user_get_proxied_email($fbu, $fb_app);
+      $account->fb_user_proxied_mail = $account->mail; // Remember where we got address.
+    }
+  }
+
+  if (!empty($fb_app) && $op == 'insert' || $op == 'login') {
+    // A facebook user has logged in.  We can map the two accounts together.
+    $fb_user_data = _fb_user_get_config($fb_app);
+    if ($fbu &&
+        $fb_user_data['map_account'] == FB_USER_OPTION_MAP_ALWAYS) {
+      list($module, $authname) = _fb_user_get_authmap($fb_app, $fbu);
+      
+      if ($op == 'insert') {
+        // User has registered, we set up the authmap this way...
+        $edit['authname_fb_user'] = $authname;
+      }
+      else if ($op == 'login') {
+        // On login, we set up the map this way...
+        user_set_authmaps($account, array($module => $authname));
+      }
+      
+      // TODO: if the app has a role, make sure the user gets that role. (presently, that will not happen until their next request)
+    }
+  }
+  
+  // Add tabs on user edit pages to manage maps between local accounts and facebook accounts.
+  if ($op == 'categories') {
+    // A tab allowing authmaps to be changed.
+    $items[] = array('name' => 'fb_user',
+                     'title' => t('Facebook Applications'),
+                     'access callback' => 'fb_user_access_own',
+                     'access arguments' => array(1, 'delete own fb_user authmap', TRUE),
+                     'weight' => 1,
+    );
+    return $items;
+  }
+  else if ($op == 'form' && $category == 'fb_user') {
+    if (!user_access('administer users') &&
+        !(user_access('delete own fb_user authmap') && $user->uid == $account->uid))
+      return; // hide from this user
+    
+    // Iterate through all facebook apps, because they do not all use the same
+    // map scheme.
+    $result = _fb_app_query_all();
+    while ($fb_app = db_fetch_object($result)) {
+      $fb_user_data = _fb_user_get_config($fb_app);
+      
+      $fbu = _fb_user_get_fbu($account->uid, $fb_app);
+      
+      if ($fbu && !$info[$fbu]) {
+        // The drupal user is a facebook user.  Now, learn more from facebook.
+        $fb = fb_api_init($fb_app, FB_FBU_ANY);
+        // Note: this requires infinite session with facebook or active fbconnect session.  TODO: fallback to fb_user_app table.
+        $info[$fbu] = $fb->api_client->users_getInfo(array($fbu), 
+                                                     array('name',
+                                                           'is_app_user',
+                                                     ));
+        //dpm($info[$fbu], "Info from facebook for $fbu");
+        
+        
+      }
+      
+      if ($fbu) {
+        list($module, $authname) = _fb_user_get_authmap($fb_app, $fbu);
+        
+        if ($fb_user_data['unique_account']) {
+          $form['map'][$module] = array('#type' => 'checkbox',
+                                        '#title' => $fb_app->title,
+                                        '#default_value' => $authname,
+                                        '#return_value' => $authname,
+          );
+        }
+        else {
+          $shared_maps[] = $fb_app->title;
+          $shared_fbu = $fbu; // Same for all shared apps.
+          $shared_module = $module;
+          $shared_authname = $authname;
+        }
+      }
+      if ($shared_maps) {
+        $form['map'][$shared_module] = array('#type' => 'checkbox',
+                                             '#title' => implode('<br/>', $shared_maps),
+                                             '#default_value' => $shared_authname,
+                                             '#return_value' => $shared_authname,
+        );
+        if ($info[$shared_fbu]) {
+          $data = $info[$shared_fbu][0];
+          $fb_link = l($data['name'], 'http://www.facebook.com/profile.php',
+                       array('query' => array('id' => $data['uid'])));
+          
+          $form['map'][$shared_module]['#description'] .= t('Local account !username corresponds to !profile_page on Facebook.com.',
+                                                              array('!username' => theme('username', $account),
+                                                                    '!profile_page' => $fb_link));
+        }
+      }
+
+      if (!$fbu) {
+        if ($user->uid == $account->uid) {
+          // TODO: give a user a way to map their facebook account to their local account.
+        }
+        else {
+          $form[$fb_app->nid] = array('#type' => 'markup',
+                                      '#value' => t('!username does not use !application.',
+                                                    array('!username' => theme('username', $account),
+                                                          '!application' => l($fb_app->title, 'node/'.$fb_app->nid),
+                                                    )),
+                                      '#prefix' => "\n<p>",
+                                      '#suffix' => "</p>\n",
+          );
+        }
+      }
+    }
+    if (isset($form)) {
+      $form['map']['#tree'] = TRUE;
+    }
+    else {
+      // Could add a facebook connect button or canvas page authorization link.
+      $form['description'] = array(
+        '#type' => 'markup',
+        '#value' => t('This account is not associated with a Facebook Application.'),
+        '#prefix' => '<p>',
+        '#suffix' => '</p>',
+      );
+    }
+    return $form;
+  }
+  else if ($op == 'update' && $category == 'fb_user') {
+    
+    if (is_array($edit['map'])) {
+      foreach ($edit['map'] as $module => $authname) {
+        user_set_authmaps($account, array($module => $authname));
+      }
+    }
+  }
+  else if ($op == 'delete') {
+    db_query("DELETE FROM {fb_user_app} WHERE uid=%d",
+             $account->uid);
+  }
+}
+
+
+/**
+ * Helper function to create an authname for the authmap table.
+ * 
+ * When a single Drupal instance hosts multiple Facebook apps, the apps can
+ * share the same mapping, or each have their own.
+ * 
+ * @return an array with both a 'module' and an authname.  A 
+ * data structure necessary for Drupal's authmap api.
+ */
+function _fb_user_get_authmap($fb_app, $fbu) {
+  $fb_user_data = _fb_user_get_config($fb_app);
+  $app_specific = $fb_user_data['unique_account'];
+  // map fbu to uid, include apikey if user is app_specific
+  if ($app_specific) {
+    // would rather use the shorter app id (not apikey), but no way to query it
+    $authname = "$fbu-$fb_app->apikey@facebook.com";
+    $module = "authname_fb_user-$fb_app->nid";
+  }
+  else {
+    $authname = "$fbu@facebook.com";
+    $module = "authname_fb_user";
+  }
+  
+  //return array('module' => $module, 'authname' => $authname);
+  return array($module, $authname);
+}
+
+/**
+ * Helper function to keep the authmap table in sync.
+ */
+function _fb_user_set_authmap($fb_app, $fbu, $account) {
+  $fb_user_data = _fb_user_get_config($fb_app);
+  if ($fb_user_data['map_account'] == FB_USER_OPTION_MAP_ALWAYS &&
+      $fbu &&
+      $account->uid != 0 &&
+      $account->uid != $fb_user_data['logged_in_uid']) {
+    list($module, $authname) = _fb_user_get_authmap($fb_app, $fbu);
+    user_set_authmaps($user, array($module => $authmap));
+    if (fb_verbose()) {
+      watchdog('fb_user', 'Using authmap to associate user !user with facebook user id %fbu.',
+               array('!user' => l($account->name, 'user/' . $account->uid),
+                     '%fbu' => $fbu,
+               ));
+    }
+  }
+}
+
+
+/**
+ * Creates a local Drupal account for the specified facebook user id.
+ * 
+ * @param fbu
+ * The facebook user id corresponding to this account.
+ * 
+ * @param config
+ * An associative array with user configuration.  Possible values include:
+ * 'app_specific' - Set to true if the same facebook id might correspond to different local accounts, depending on which apps the user has used.  Set to false if the user shares one local account across facebook apps.
+ * 'roles' - an array with keys corresponding to role ids the new user should receive.
+ */
+function fb_user_create_local_user($fb, $fb_app, $fbu,
+                                   $config = array()) {
+
+  // TODO: ensure $fbu is a real user, not FB_FB_ANY or FB_FBU_CURRENT
+  
+  // debugging.
+  //drupal_set_message("Facebook knows you as $username ($fbu)");
+  
+  list($module, $authname) = _fb_user_get_authmap($fb_app, $fbu);
+  
+  $account = user_external_load($authname);
+  
+  if (!$account) {
+    // Create a new user in our system
+
+    // learn some details from facebook
+    $infos = fb_users_getInfo(array($fbu), $fb);
+    $config['info'] = $infos[0];
+
+    // We need a username that will not collide with any already in our
+    // system.  Could use $authname, but this will be just slightly more
+    // user-friendly.
+    if ($config['app_specific'] && !$config['username'])
+      $config['username'] = "$fbu-$fb_app->label@facebook";
+    else
+      $config['username'] = "$fbu@facebook";
+    
+    // Allow third-party module to adjust any of our settings before we create
+    // the user.
+    $config = fb_invoke(FB_OP_PRE_USER, array('fbu' => $fbu,
+					      'fb' => $GLOBALS['fb'],
+					      'fb_app' => $fb_app),
+			$config);
+    
+    // TODO: double-check that username is not taken.
+    $user_default = array('name' => $config['username'],
+                          'mail' => $config['mail'],
+                          'pass' => user_password(),
+                          'init' => db_escape_string($config['username']),
+                          'status' => 1,
+                          'authname_fb_user' => $authname,
+    );
+    
+    // Allow $config to set other values, including mail
+    $user_default = array_merge($user_default, $config);
+
+    $user_default['roles'][DRUPAL_AUTHENTICATED_RID] = 'authenticated user';
+    if (count($config['roles']))
+      foreach ($config['roles'] as $rid => $value)
+        if ($rid)
+          $user_default['roles'][$rid] = $value;
+    $user_default['fbu'] = $fbu; // Will get saved as user data.
+    
+    $account = user_save('', $user_default);
+
+    watchdog('fb_user', 'New user: %name %email.', 
+             array('%name' => $name, '%email' => '<'. $mail .'>'), 
+             WATCHDOG_NOTICE, l(t('edit'), 'user/'. $account->uid .'/edit'));
+
+    // Allow third-party modules to act after account creation.
+    //$config = fb_invoke($fb_app, FB_OP_POST_USER, NULL, array('account' => $account));
+    fb_invoke(FB_OP_POST_USER, array('account' => $account,
+				     'fb_app' => $fb_app,
+				     'fb' => $fb));
+
+    // TODO: move this to fb_action.  Temporarily disabled.
+    if (FALSE) {
+      // Prepare to send an email.
+      $base = url('<front>', array('absolute' => TRUE));
+      $variables = array('!username' => $account->name, '!site' => variable_get('site_name', 'Drupal'), '!password' => $user_default['pass'], '!uri' => $base, '!uri_brief' => substr($base, strlen('http://')), '!mailto' => $mail, '!date' => format_date(time()), '!login_uri' => url('user', array('absolute' => TRUE)), '!edit_uri' => url('user/'. $account->uid .'/edit', array('absolute' => TRUE)), '!login_url' => user_pass_reset_url($account));
+      
+      $subject = _user_mail_text('welcome_subject', $variables);
+      $body = _user_mail_text('welcome_body', $variables);
+      
+      // Fix links
+      $subject = fb_scrub_urls($subject);
+      $body = fb_scrub_urls($body);
+      
+      // TODO: make it configurable whether an email is sent, and what it contains.
+      $fb->api_client->notifications_sendEmail($fbu, $subject, $body, $body);
+    }
+  }
+  
+  if (!$account->fbu) {
+    // This should only happen on older, automatically created accounts.
+    $account->fbu = $fbu;
+    user_save($account, array('fbu' => $fbu));
+  }
+  
+  return $account;
+}
+
+/**
+ * Given an app and facebook user id, return the corresponding local user.
+ */
+function fb_user_get_local_user($fbu, $fb_app) {
+  // TODO: this function should probably use user_external_load, rather than query the database directly.  See deprecated fb_user_load for example.
+
+  // TODO: this query probably needs to search for one authname or the other, not both.
+  // Alternately, use the fb_user_app table rather than authmap to look up this information.
+  $result = db_query("SELECT am.* FROM authmap am WHERE am.authname='%s' OR am.authname='%s' ORDER BY am.authname",
+                     "$fbu-$fb_app->apikey@facebook.com", "$fbu@facebook.com");
+  if ($data = db_fetch_object($result)) {
+    $account = user_load(array('uid' => $data->uid));
+    return $account;
+  }
+}
+
+/**
+ * Returns local uids of friends of a given user.
+ * 
+ * Query is relatively efficient for the current user of a canvas page.  For
+ * all other users, and non-canvas pages it requires expensive call to
+ * facebook.  That said, our local database query may be inefficient for users
+ * with large numbers of friends, so use with caution.
+ * 
+ * TODO: should this function cache results?
+ * 
+ * Note: the api takes fbu as a parameter, but this usually causes problems
+ * because facebook restricts users to query only about their own friends.
+ * For the time being, expect this function to work only on canvas pages to
+ * find friends of the current user.
+ */
+function fb_user_get_local_friends($fbu = NULL, $fb_app = NULL) {
+  if (!isset($fbu)) {
+    $fbu = fb_facebook_user();
+  }
+  $uids = array();
+  if ($fbus = fb_get_friends($fbu, $fb_app)) {
+    // Should this query be limited to users of the app?
+    $query = "SELECT uid FROM {fb_user_app} WHERE fbu in (%s) AND uid>0";
+    $args[] = implode(',', $fbus);
+    $result = db_query($query, $args);
+    
+    while ($data = db_fetch_object($result)) {
+      if ($data->uid) {
+        $uids[] = $data->uid;
+      }
+    }
+  }
+  return $uids;
+}
+
+
+/**
+ * Given a local user id, find the facebook id.  This is for internal use.
+ * Outside modules use fb_get_fbu().
+ */
+// TODO: change this to use the newly added uid column in fb_user_app table.
+function _fb_user_get_fbu($uid, $fb_app) {
+  static $cache = array();
+
+  if (!isset($cache[$uid])) {
+    $cache[$uid] = array();
+    // Look up this user in the authmap
+    $result = db_query("SELECT * FROM {authmap} WHERE uid=%d AND authname LIKE '%@facebook.com'", $uid);
+    while (!isset($fbu) && $data = db_fetch_object($result)) {
+      // get the part before the '@'
+      $substr = substr($data->authname, 0, strpos($data->authname, '@'));
+      // then split at the '-'
+      $parts = explode('-', $substr);
+      if (isset($parts[1]))
+        // $parts[1] is app id
+        $cache[$uid][$parts[1]] = $parts[0];
+      else
+        $cache[$uid]['global'] = $parts[0];
+    }
+  }
+  // Return either the global or the app-specific mapping, depending on the app configuration.
+  $fb_user_data = _fb_user_get_config($fb_app);
+  if ($fb_user_data['unique_account'])
+    // Return the app-specific mapping
+    return $cache[$uid][$fb_app->apikey];
+  else if (isset($cache[$uid]['global']))
+    // Return the global mapping
+    return $cache[$uid]['global'];
+}
+
+
+function fb_user_token_list($type = 'all') {
+  if ($type == 'all' || $type == 'fb' || $type == 'fb_app') {
+    $tokens['fb_app']['fb-app-user-fbu'] = t('Current user\'s Facebook ID');
+    $tokens['fb_app']['fb-app-user-name'] = t('Current user\'s name on Facebook (TODO)');
+    $tokens['fb_app']['fb-app-user-name-fbml'] = t('Current user\'s name for display on Facebook profile and canvas pages.');
+    $tokens['fb_app']['fb-app-profile-url'] = t('Current user\'s Facebook profile URL');
+  }
+  return $tokens;
+}
+
+function fb_user_token_values($type = 'all', $object = NULL) {
+  $values = array();
+  if ($type == 'fb_app' && $object) {
+    $fb_app = $object;
+    global $user;
+    $fbu = _fb_user_get_fbu($user->uid, $fb_app);
+    if ($fbu) {
+      $values['fb-app-user-fbu'] = $fbu;
+      $values['fb-app-user-name'] = 'TODO XXX';
+      $values['fb-app-user-name-fbml'] = '<fb:name uid="'.$fbu.'" />';
+      $values['fb-app-profile-url'] = 'http://www.facebook.com/profile.php?id='.$fbu;
+    }
+  }
+  return $values;
+}

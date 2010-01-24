@@ -1,0 +1,86 @@
+<?php
+  /**
+   * @file
+   * Installs database tables and settings required by fb_app module.
+   * 
+   */
+  // TODO: some of these tables should be created by othe module install files.
+
+/**
+ * hook_install()
+ */
+function fb_app_install() {
+  // Create tables.
+  drupal_install_schema('fb_app');
+  
+  drupal_set_message(t('Facebook Application module installed. Please grant yourself <a href="!perm">permissions</a> and then browse to <a href="!create">Create Content => Facebook Application</a> to get started.', array('!perm' => url('admin/user/permissions'), '!create' => url('node/add/fb-app'))));
+}
+
+/**
+ * hook_uninstall()
+ */
+function fb_app_uninstall() {
+  // Remove tables.
+  drupal_uninstall_schema('fb_app');
+}
+
+function fb_app_schema() {
+  $schema['fb_app'] = array(
+    'description' => 'Main FB_APP table',
+    'fields' => array(
+      'nid' => array('type' => 'int', 'length' => 11, 'unsigned' => TRUE, 'not null' => TRUE, ),
+      'label' => array('type' => 'varchar', 'length' => 255, 'not null' => TRUE, ),
+      'apikey' => array('type' => 'varchar', 'length' => 255, 'not null' => TRUE, ),
+      'id' => array('type' => 'varchar', 'length' => 255, 'not null' => TRUE, ),
+      'secret' => array('type' => 'varchar', 'length' => 255, 'not null' => TRUE, ),
+      'canvas' => array('type' => 'varchar', 'length' => 255, 'not null' => TRUE, ),
+      'data' => array('type' => 'text', 'size' => 'big', ),
+    ),
+    'unique keys' => array(
+      'apikey' => array('apikey'),
+    ),
+    'primary key' => array('nid'),
+  );
+  $schema['fb_app_block'] = array(
+    'fields' => array(
+      'nid' => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, ),
+      'delta' => array('type' => 'varchar', 'length' => 32, 'not null' => TRUE, ),
+      'format' => array('type' => 'int', 'default' => 0, ),
+      'body' => array('type' => 'text', 'size' => 'big', 'not null' => TRUE, ),
+    ),
+    'primary key' => array('nid', 'delta'),
+  );
+  $schema['fb_cache_filter'] = drupal_get_schema_unprocessed('system', 'cache');
+
+  return $schema;  
+}
+
+function fb_app_update_6100() {
+  // Add id field
+  $ret = array();
+  db_add_field($ret, 'fb_app', 'id', array('type' => 'varchar', 'length' => 255, 'not null' => TRUE, ));
+  return $ret;
+}
+
+function fb_app_update_6101() {
+  $ret = array();
+  // The rid field is no longer used, and causes problems for databases in strict mode.
+  db_drop_field($ret, 'fb_app', 'rid');
+  // Other columns have been moved to fb_user.module, and are stored in data
+  db_drop_field($ret, 'fb_app', 'require_login');
+  db_drop_field($ret, 'fb_app', 'create_account');
+  db_drop_field($ret, 'fb_app', 'unique_account');
+  // canvas moved to fb_canvas.module
+  db_drop_field($ret, 'fb_app', 'canvas'); // BAD IDEA!  see update 6202
+
+  return $ret;
+}
+
+function fb_app_update_6202() {
+  // canvas is too important, let's support it.
+  $ret = array();
+  db_add_field($ret, 'fb_app', 'canvas', array('type' => 'varchar', 'length' => 255, 'not null' => TRUE, ));
+  drupal_set_message(t('If any of your Facebook Applications support canvas pages, go to those applications, click edit and submit.  This must be done manually.  Sorry for the inconvenience.'));
+  return $ret;
+}
+

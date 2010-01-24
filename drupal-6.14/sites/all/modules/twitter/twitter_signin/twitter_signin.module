@@ -1,5 +1,5 @@
 <?php
-// $Id: twitter_signin.module,v 1.1.2.3 2010/01/11 06:25:18 walkah Exp $
+// $Id: twitter_signin.module,v 1.1.2.5 2010/01/23 23:27:21 walkah Exp $
 
 /**
  * Implementation of hook_menu().
@@ -19,7 +19,7 @@ function twitter_signin_menu() {
     'title' => 'Sign-in',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('twitter_signin_admin_settings'),
-    'access arguments' => array('access site configuration'),
+    'access arguments' => array('administer site configuration'),
     'file' => 'twitter_signin.pages.inc',
     'type' => MENU_LOCAL_TASK,
     'weight' => 5
@@ -45,6 +45,15 @@ function twitter_signin_block($op = 'list', $delta = 0, $edit = array()) {
         $block['content'] = twitter_signin_button();
         return $block;
       }
+  }
+}
+
+/**
+ * Implementation of hook_user().
+ */
+function twitter_signin_user($op, &$edit, &$account, $category = NULL) {
+  if ($op == 'insert' && isset($_SESSION['twitter']['values'])) {
+    unset($_SESSION['twitter']);
   }
 }
 
@@ -94,6 +103,10 @@ function twitter_signin_form_alter(&$form, $form_state, $form_id) {
       '#value' => theme('item_list', $items),
     );
   }
+  elseif ($form_id == 'user_register' && isset($_SESSION['twitter']['values'])) {
+    $form['name']['#default_value'] = $_SESSION['twitter']['values']['screen_name'];
+    $form['auth_twitter'] = array('#type' => 'hidden', '#value' => $_SESSION['twitter']['values']['user_id']);
+  }
 }
 
 /**
@@ -102,6 +115,8 @@ function twitter_signin_form_alter(&$form, $form_state, $form_id) {
 function twitter_signin_oauth_callback_submit(&$form, &$form_state) {
   global $user;
 
+  $success = FALSE;
+
   $key = variable_get('twitter_consumer_key', '');
   $secret = variable_get('twitter_consumer_secret', '');
   $response = $form_state['twitter_oauth']['response'];
@@ -109,6 +124,7 @@ function twitter_signin_oauth_callback_submit(&$form, &$form_state) {
   $account = user_external_load($response['user_id']);
   if (isset($account->uid)) {
     user_external_login($account, $response);
+    $success = TRUE;
   }
   elseif ($uid = db_result(db_query("SELECT uid FROM {twitter_account} WHERE twitter_uid= %d", $response['user_id']))) {
     // We have an existing twitter account - set it up for login
@@ -116,18 +132,37 @@ function twitter_signin_oauth_callback_submit(&$form, &$form_state) {
     $edit["authname_twitter"] = $response['user_id'];
     user_save($account, $edit);
     $user = $account;
+    $success = TRUE;
   }
   else {
-    $edit = array(
-      'name' => $response['screen_name'],
-      'pass' => user_password(),
-      'init' => $response['screen_name'],
-      'status' => 1,
-      "authname_twitter" => $response['user_id'],
-      'access' => time(),
-    );
-    $account = user_save('', $edit);
-    $user = $account;
+    // No existing user account, let's see if we can register.
+    if (variable_get('twitter_signin_register', 0)) {
+      // Check for a nickname collision
+      $account = user_load(array('name' => $response['screen_name']));
+      if (!$account->uid) {
+        $edit = array(
+          'name' => $response['screen_name'],
+          'pass' => user_password(),
+          'init' => $response['screen_name'],
+          'status' => 1,
+          "authname_twitter" => $response['user_id'],
+          'access' => time(),
+        );
+        $account = user_save('', $edit);
+        $user = $account;
+        $success = TRUE;
+      }
+      else {
+        drupal_set_message(t('The nickname %name is already in use on this site, please register below with a new nick name, or @login to continue.', array('%name' => $response['screen_name'], '@login' => url('user/login'))), 'warning');
+      }
+    }
+    else {
+      drupal_set_message(t('Please complete the following registration form to create your new account on %site', array('%site' => variable_get('site_name', ''))));
+    }
   }
-
+  
+  if (!$success) {
+    $_SESSION['twitter']['values'] = $response;
+    drupal_goto('user/register');
+  }
 }

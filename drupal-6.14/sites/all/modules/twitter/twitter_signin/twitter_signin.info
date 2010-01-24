@@ -6,9 +6,9 @@ core = 6.x
 dependencies[] = twitter
 dependencies[] = oauth
 
-; Information added by drupal.org packaging script on 2010-01-11
+; Information added by drupal.org packaging script on 2010-01-24
 version = "6.x-3.x-dev"
 core = "6.x"
 project = "twitter"
-datestamp = "1263212431"
+datestamp = "1264292168"
 

@@ -1,0 +1,13 @@
+diff -r aa2950e9e68d sites/all/modules/twitter/twitter_actions/twitter_actions.module
+--- a/sites/all/modules/twitter/twitter_actions/twitter_actions.module	Tue Sep 08 23:53:10 2009 -0400
++++ b/sites/all/modules/twitter/twitter_actions/twitter_actions.module	Wed Sep 09 00:30:56 2009 -0400
+@@ -173,6 +173,7 @@
+ 
+   $message = strtr($context['message'], $variables);
+ 
+-  module_load_include('inc', 'twitter');
+-  twitter_set_status($context['screen_name'], $context['password'], $message);
++  module_load_include('lib.php', 'twitter');
++  $twitter = new Twitter($context['screen_name'], $context['password']);
++  $twitter->status_update($message);
+ }

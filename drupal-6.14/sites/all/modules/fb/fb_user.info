@@ -1,0 +1,13 @@
+name= User Management
+description = <strong>REQUIRED</strong> (unless your app is incredibly simple).  Create local accounts for users of Facebook Apps.
+package = Drupal for Facebook
+dependencies[] = fb
+dependencies[] = fb_app
+core = 6.x
+
+; Information added by drupal.org packaging script on 2010-01-16
+version = "6.x-2.x-dev"
+core = "6.x"
+project = "fb"
+datestamp = "1263600360"
+

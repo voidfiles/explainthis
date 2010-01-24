@@ -1,0 +1,44 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ *   Uninstalls the Shorten module.
+ */
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function shorten_uninstall() {
+  variable_del('shorten_www');
+  variable_del('shorten_adjix');
+  variable_del('shorten_cligs');
+  variable_del('shorten_method');
+  variable_del('shorten_redirec');
+  variable_del('shorten_service');
+  variable_del('shorten_bitly_key');
+  variable_del('shorten_bitly_login');
+  variable_del('shorten_show_service');
+  variable_del('shorten_generate_token');
+  variable_del('shorten_service_backup');
+  variable_del('shorten_invisible_services');
+}
+
+/**
+ * Implementation of hook_update_N().
+ */
+function shorten_update_6100() {
+  $r = FALSE;
+  if (variable_get('shorten_service', 'is.gd') == 'Drupal ShortURL module') {
+    variable_set('shorten_service', 'This site');
+    $r = TRUE;
+  }
+  if (variable_get('shorten_service_backup', 'TinyURL') == 'Drupal ShortURL module') {
+    variable_set('shorten_service_backup', 'This site');
+    $r = TRUE;
+  }
+  return array(array(
+    'success' => TRUE,
+    'query' => $r ? t('Shorten URLs service updated') : t('Caches refreshed'),
+  ));
+}
