@@ -87,6 +87,7 @@ function nodecomment_notify_form_alter(&$form, &$form_state, $form_id) {
     $form['notify_settings']['notify']['#default_value'] = $notify;
     $form['notify_settings']['notify_type']['#default_value'] = $notify;
   }
+  
 }
 
 /**
@@ -97,6 +98,7 @@ function nodecomment_notify_nodeapi(&$node, $op, $arg = 0, $page = 0) {
 
   // In theory, the update or insert operations are duplicates with publish which
   // would lead to duplicate messages.  _nodecomment_notify_mailalert() protects against that.
+  
   switch ($op) {
     case 'validate':
        // We assume that if they are non-anonymous then they have a valid mail.
@@ -177,6 +179,7 @@ function _nodecomment_notify_mailalert($comment) {
   $nid = $comment->comment_target_nid;
   $cid = $comment->nid;
 
+  print "<h1 class='s2'>We are going to send an email</h1>";
   // Check to see if a notification has already been sent for this
   // comment so that edits to a comment don't trigger an additional
   // notification.

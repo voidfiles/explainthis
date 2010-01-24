@@ -403,7 +403,7 @@ function nodecomment_form_alter(&$form, &$form_state, $form_id) {
             '#maxlength' => 255,
             '#size' => 30,
             '#default_value' => $node->homepage,
-            '#required' => ($anon_meta_info == COMMENT_ANONYMOUS_MUST_CONTACT)
+            '#required' => false
           );
         }
         else {
@@ -524,7 +524,7 @@ function nodecomment_nodeapi(&$node, $op, $arg = 0, $page = 0) {
   // When the node IS a comment
   //   -- delete any children comments
   //   -- update node_comment_statistics for the parent node
-
+  print "<h1 class='s2'>".$op."We are going to send an email</h1>";
 
   switch ($op) {
     case 'load':
