@@ -31,7 +31,15 @@ function explainthis_form_alter(&$form, $form_state, $form_id) {
     );
     $form['#submit'][] = 'explainthis_question_feed_submit';
   }
+    
+
 }
+
+
+
+
+
+
 
 /**
  * Stock informations used by the facebook feed javascript function.
