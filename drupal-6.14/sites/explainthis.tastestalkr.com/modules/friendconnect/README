@@ -1,0 +1,78 @@
+Copyright 2009 Google Inc.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+Plugin Name: Friend Connect Commenting Plugin
+Version: 1.1
+Description: This plugin allows a user to leave comments using his or
+her Friend Connect (http://www.google.com/friendconnect/) id to signin.
+More description can be found in the attached README file
+
+
+Google Friend Connect Plugin (Comment)
+--------------------------------------
+
+DESCRIPTION:
+Plugin Features
+ * Login
+   The plugin allows your site visitors to join using their external accounts (!Google, !Yahoo, !AIM, !Netlog, !OpenId)
+ * Comments
+   Users are able to comment using either the drupal comments or a comments or reviews gadget
+ * Theme Compatibility
+   All colors are customizable to match your Drupal Theme
+ * Optional Gadgets
+    * Members
+        Let users join your site, create profiles, find other users, and invite friends to join.
+    * Recommendations
+        Let users recommend their favorite pages, surfacing your site's most popular content.
+    * Global Comments
+        Let users post comments and video links.Posts apply to the entire website.
+    * Social Bar
+        Let users sign in, view other members, leave comments, and see recent site activity from the top or bottom of your website.
+    * Featured Content
+        Display content from your site based on the interests of your site's visitors. Using Google site search, this gadget will automatically display content that matches the interests expressed by your site's visitors.
+    * Interests Polls
+        Ask your visitors questions relevant to your site via a poll that adds to their profile. Answers can enhance AdSense and the featured content gadget. This gadget works in concert with the Interests feature.
+    * Newsletter
+        Help members sign up for your newsletter by providing their email address if they haven't yet specified one.
+
+More details at http://code.google.com/p/drupal-friendconnect/wiki
+        
+INSTALLATION:
+  * First, sign up at the Friend Connect site if you haven't already.
+  * Get your Site ID.
+  * Download all files in the drupal/6.x directory to the sites/all/modules/friendconnect/ directory for your custom Drupal installation.
+  * Activate the plugin by logging in as administrator (Site Building -> Modules -> Google Friend Connect).  
+  * Configure it by providing the Site ID (Site Configuration -> Google Friend Connect).
+Adding Blocks
+
+  * Enter bocks administration section (Site Building -> Blocks) Friend Connect gadgets are available as regular drupal blocks.
+    The available gadgets are:
+     * Members
+     * Recommendations
+     * Global Comments
+     * Social Bar
+     * Featured Content
+     * Interests Polls
+     * Newsletter
+     * Adsense
+  
+  * Each gadget has it's own configuration features, to configure a gadget click on the "configure" link.
+
+More details at http://code.google.com/p/drupal-friendconnect/wiki
+
+CAVEATS:
+
+Issues at http://code.google.com/p/drupal-friendconnect/issues/list
+
+AUTHOR:
+Mauro Gonzalez (gmaurol@gmail.com )

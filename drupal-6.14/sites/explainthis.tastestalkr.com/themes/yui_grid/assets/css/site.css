@@ -166,9 +166,9 @@ color: black;
 
 
 /* Node */
-.node .actions {float:left;width:50px;}
+.node .actions {float:left;width:40px;}
 .node .actions p {text-align:center;}
-.node .content, .node .context {margin-left:60px;}
+.node .content, .node .context {margin-left:41px;}
 
 .content p {
    margin-bottom:.5em;
@@ -217,29 +217,43 @@ color: black;
     padding-right:4px;
 }
 /* Voting */
-
-.vote-up,.vote-down {
-display:block;margin:0 auto;
-}
-
-.vote-arrow {
-height: 25px;
-width: 40px;
-}
-
-.vote_up {
-    margin-bottom:.7em;
-}
-
-.vote-count-separator {
-border-top:1px solid silver;width:30px;margin-left:15px;
-}
 .vote-up-down-widget {
-    border:0;
-    clear:left;
-    float:left;
+    border:none;
+    clear:none;
+    float:none;
     margin:0;
-    padding:2px;
+    padding:0;
+    text-align:center;
+    width:100%;
+}
+.vote_up,.vote_down { margin:0 auto;} 
+.vote_up a,.vote_down a {
+    display:block;
+    margin:0 auto;
+    background-image:url(../img/arrows.gif);
+    text-indent:-9999em;
+    height:16px;
+    width:16px;
+}
+
+
+
+.vote-up-act a, .vote-up-inact a:hover{
+    background-position: 0px 16px;
+}
+
+.vote-up-inact a, .vote-up-act a:hover{
+    background-position: 0px 32px;
+}
+
+.vote-down-inact a, .vote-down-act a:hover{
+    
+    background-position: 0px 0px;
+}
+
+.vote-down-act a, .vote-down-inact a:hover{
+    
+    background-position: 0px 48px;
 }
 
 
@@ -347,41 +361,7 @@ ul.tabs li a {
     background-color:#FFF;
     padding:0;
 }
-.vote-up-down-widget{
-    text-align:center;
-    width:100%;
-    
-}
 
-.vote-up-down-widget a:hover {
-    color: green;
-}
-.vote-up-down-widget span, .vote-up-down-widget a {
-    width:100%;
-}
-.vote-up-act, .vote-up-inact:hover,.vote-up-act a {
-  /*background: url(../img/a_up_act.png) no-repeat 0px 0px;*/
-  background:none;
-  color: green;
-}
-
-
-.vote-up-inact, .up-inact {
-  background: none;
-}
-/*
-  .vote-down-inact, .down-inact {
-    background: url(../img/a_down_inact.png) no-repeat 0px 0px;
-  }
-}
-*/
-.vote-down-inact, .down-inact {
-    background:none;
-}
-.vote-down-act, .vote-down-inact:hover,.vote-down-act a {
-    background:none;
-  color: green;
-}
 
 
 .info-block {

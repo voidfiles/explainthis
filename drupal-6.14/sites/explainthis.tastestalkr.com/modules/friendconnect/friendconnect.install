@@ -1,0 +1,141 @@
+<?php
+// $Id$
+
+
+/**
+ * Copyright 2009 Google Inc.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Plugin Name: Friend Connect Commenting Plugin
+ * Version: 1.1
+ * Description: This plugin allows a user to leave comments using his or
+ * her Friend Connect (http://www.google.com/friendconnect/) id to signin.
+ * More description can be found in the attached README file, or at
+ *
+ * http://code.google.com/p/google-friend-connect-plugins
+ */
+
+
+/**
+ * Implementation of hook_schema().
+ *
+ * MYSQL command:
+ *  CREATE TABLE `friendconnect` (
+ *    `fcid` varchar(100) NOT NULL,
+ *    `uid` int(10) unsigned NOT NULL,
+ *    `creation_time` varchar(100) default NULL,
+ *    PRIMARY KEY  (`fcid`),
+ *    UNIQUE KEY `uid` (`uid`),
+ *    UNIQUE KEY `fcid` (`fcid`)
+ *  ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+ */
+function friendconnect_schema() {
+  $schema['friendconnect'] = array(
+    'description' => t('Google Friend Connect profile to Local User mapping.'),
+    'fields' => array(
+      'fcid' => array(
+        'type' => 'varchar',
+        'length' => 100,
+        'not null' => TRUE,
+        'description' => t('The Google Friend Connect profile id.'),
+      ),
+      'uid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => t('The local Drupal instance user uid.'),
+      ),
+      'creation_time' => array(
+        'type' => 'varchar',
+        'length' => 100,
+        'not null' => FALSE,
+        'default' => '',
+        'description' => t('Timestamp when the association was created.'),
+      ),
+    ),
+    'primary key' => array('fcid'),
+    'unique_keys' => array(
+      'fcid' => array('fcid'),
+      'uid' => array('uid'),
+    ),
+  );
+  return $schema;
+};
+
+
+/**
+ * Implementation of hook_install().
+ */
+function friendconnect_install() {
+  drupal_install_schema('friendconnect');
+};
+
+
+/**
+ * Implementation of hook_uninstall().
+ *
+ * MYSQL command:
+ *  DROP TABLE `friendconnect`;
+ */
+function friendconnect_uninstall() {
+  drupal_uninstall_schema('friendconnect');
+  db_query("DELETE FROM {variable} WHERE name LIKE 'friendconnect_%'");
+  cache_clear_all('variables', 'cache');
+};
+
+
+/**
+ * variables update
+ */
+function friendconnect_update_6100() {
+  // gadget skin modified variables 
+  $renamed_skin_vars = array(
+    'BORDER_COLOR',
+    'ENDCAP_BG_COLOR',
+    'ENDCAP_TEXT_COLOR',
+    'ENDCAP_LINK_COLOR',
+    'ALTERNATE_BG_COLOR',
+    'CONTENT_BG_COLOR',
+    'CONTENT_LINK_COLOR',
+    'CONTENT_TEXT_COLOR',
+    'CONTENT_SECONDARY_LINK_COLOR',
+    'CONTENT_SECONDARY_TEXT_COLOR',
+    'CONTENT_HEADLINE_COLOR'
+  );
+  // social bar modified variables 
+  $renamed_sb_vars = array(
+    'social_bar_enabled',
+    'social_bar_pos'
+  );
+  // set the new skin variables and fix the values
+  // add friendconnect_ namespace, and add # to non empty values
+  foreach($renamed_skin_vars as $rvar) {
+    $current_val = variable_get($rvar,false);
+    if($current_val !== false) {
+      $fixed_val = $current_val != '' ? "#{$current_val}" : $current_val;
+      variable_set("friendconnect_{$rvar}", $fixed_val);
+    }
+  }
+  // set the new social bar variables, values do not need to be fixed
+  foreach ($renamed_sb_vars as $sbvar) {
+    $val = variable_get($sbvar, false);
+    if($val !== false) {
+      variable_set("friendconnect_{$sbvar}", $val);
+    }
+  }
+  // delete old variables
+  $renamed_vars = array_merge($renamed_skin_vars, $renamed_sb_vars);
+  db_query("DELETE FROM {variable} " 
+    . " WHERE name IN ('".implode("','",$renamed_vars)."'").")";
+  cache_clear_all('variables', 'cache');
+}

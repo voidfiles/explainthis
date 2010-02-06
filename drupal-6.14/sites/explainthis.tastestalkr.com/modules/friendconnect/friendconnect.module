@@ -1,0 +1,1110 @@
+<?php
+// $Id$
+
+/**
+ * Copyright 2009 Google Inc.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Plugin Name: Friend Connect Commenting Plugin
+ * Version: 1.1
+ * Description: This plugin allows a user to leave comments using his or
+ * her Friend Connect (http://www.google.com/friendconnect/) id to signin.
+ * More description can be found in the attached README file, or at
+ *
+ * http://code.google.com/p/drupal-friendconnect
+ */
+
+define('FRIENDCONNECT',
+  'http://www.google.com/friendconnect/script/friendconnect.js');
+
+define('GOOGLE', 'http://www.google.com/friendconnect/');
+define('PROJECT_NAME', 'Google Friend Connect Plugins');
+define('PROJECT_URL', 
+  'http://code.google.com/p/google-friend-connect-plugins');
+
+define('FRIEND_CONNECT_MEMBERS',0);
+define('FRIEND_CONNECT_RECOMMENDATIONS',1);
+define('FRIEND_CONNECT_GLOBAL_COMMENTS',2);
+define('FRIEND_CONNECT_POLLS',3);
+define('FRIEND_CONNECT_NEWSLETTER',4);
+define('FRIEND_CONNECT_FEATURED_CONTENT',5);
+define('FRIEND_CONNECT_ADENSE',6);
+define('FRIEND_CONNECT_ACTIVITIES',7);
+
+/**
+ * Implementation of hook_help().
+ */
+function friendconnect_help($path, $arg) {
+  $output = '';
+  switch($path) {
+    case 'admin/help#friendconnect':
+      $output = '<p>' . t('The Google Friend Connect module allows your users'
+      . ' to easily connect and contribute to your site\'s contents.')
+      . '</p>';
+      $output .= '<p>' . t('Register your site once at <a href="@gfc">'
+      . GOOGLE . '</a> and drive more traffic to your site!',
+      array('@gfc' => GOOGLE)) . '</p>';
+      $output .= '<p>' . t('Visit the official <a href="@code">'
+      . PROJECT_NAME . '</a> site for more details.',
+      array('@code' => PROJECT_URL)) . '</p>';
+      break;
+  }
+  return $output;
+};
+
+/**
+ * Implementation of hook_menu().
+ */
+function friendconnect_menu() {
+  $items = array();
+  $items['admin/settings/friendconnect'] = array(
+    'title' => t('Google Friend Connect'),
+    'description' => t('Configure how your site talks to Google Friend'
+    . ' Connect.'),
+    'page arguments' => array('friendconnect_admin'),
+    'page callback' => 'drupal_get_form',
+    'access arguments' => array('administer site configuration'),
+    'file' => 'friendconnect.admin.inc'
+    );
+
+    // This page is rendered to the user only when an error occurs.
+    $items['friendconnect/join'] = array(
+    'title' => t('Auto-Login with Google Friend Connect'),
+    'type' => MENU_SUGGESTED_ITEM,
+    'page callback' => 'friendconnect_join',
+    'access arguments' => array('access content'),
+    'description' => t('Login to local Drupal account ' 
+      . '(create one if needed).'),
+    );
+    return $items;
+};
+
+
+/**
+ * Helper for setting javascript attributes.
+ */
+function friendconnect_js_helper($arg, $value) {
+  drupal_add_js('Drupal.settings.friendconnect["' . $arg . '"] = "'
+  . $value . '";', 'inline', 'footer');
+};
+
+
+/**
+ * Implementation of hook_init().
+ */
+function friendconnect_init() {
+  $module_path = drupal_get_path('module', 'friendconnect') . '/';
+  $parent_url = base_path() . $module_path;
+  $site_id = variable_get('friendconnect_siteid', '');
+  $join_url = url('friendconnect/join');
+  $logout_url = url('logout');
+  $destination = explode("=", drupal_get_destination(), 2);
+  $current_url = $destination[1];  // change from 'x=y*' to 'y*' format
+  
+  // get friendconnect id of logged in user
+  global $user;
+  $current_fcid = '0';
+  if ($user->uid != 0) {
+    $query = 'SELECT fcid FROM {friendconnect} WHERE uid = %d LIMIT 1';
+    $result = db_query($query, $user->uid);
+    while ($val = db_fetch_object($result)) $current_fcid = $val->fcid;
+  }
+
+  // load remote js file
+  drupal_set_html_head('<script type="text/javascript" '
+  . 'src="http://www.google.com/jsapi"></script>');
+  
+  drupal_add_js('google.load("friendconnect", "0.8");', 'inline', 'header');
+
+  // load local js file
+  drupal_add_js($module_path . 'friendconnect.js', 'module', 'footer');
+
+  // populate interesting parameters
+  drupal_add_js('Drupal.settings.friendconnect = [];', 'inline', 'footer');
+  friendconnect_js_helper('site_id', $site_id);
+  friendconnect_js_helper('parent_url', $parent_url);
+  friendconnect_js_helper('join_url', $join_url);
+  friendconnect_js_helper('logout_url', $logout_url);
+  friendconnect_js_helper('clean_url', variable_get('clean_url', 0));
+  friendconnect_js_helper('current_url', $current_url);
+  friendconnect_js_helper('current_uid', $user->uid);
+  friendconnect_js_helper('current_fcid', $current_fcid);
+
+  // invoke friendconnect api
+  drupal_add_js('FC_LoadFriendConnect();', 'inline', 'footer');
+};
+
+
+
+
+/**
+ * builds the gadget skin object from saved values.
+ * @return string JSON representation of the gadget skin
+ */
+function friendconnect_build_skin() {
+   $ret = array();
+   $skin_opts = array(
+      'BORDER_COLOR',
+      'ENDCAP_BG_COLOR',
+      'ENDCAP_TEXT_COLOR',
+      'ENDCAP_LINK_COLOR',
+      'ALTERNATE_BG_COLOR',
+      'CONTENT_BG_COLOR',
+      'CONTENT_LINK_COLOR',
+      'CONTENT_TEXT_COLOR',
+      'CONTENT_SECONDARY_LINK_COLOR',
+      'CONTENT_SECONDARY_TEXT_COLOR',
+      'CONTENT_HEADLINE_COLOR',
+    );
+    foreach($skin_opts as $opt) {
+      $val = variable_get("friendconnect_$opt",'');
+      if($val!='') {
+        $ret[$opt] = "$val";
+      } else {
+        $ret[$opt] = 'transparent';
+      }
+    }
+    $ret['BG_COLOR'] = $ret['CONTENT_BG_COLOR'];
+    $ret['ANCHOR_COLOR'] = $ret['CONTENT_LINK_COLOR'];
+    $ret['FONT_COLOR'] = $ret['CONTENT_TEXT_COLOR'];
+    return json_encode($ret);
+};
+
+/**
+ * tells whether a block is enabled or not
+ * returns true if the block is enabled, false otherwise.
+ * @param $block_delta
+ * @return boolean
+ */
+function is_block_enabled($block_delta) {
+  $query = 'SELECT 1 AS enabled FROM {blocks} b ' . 
+    'WHERE b.module = \'friendconnect\' AND b.delta = %d ' .
+    ' AND b.status = 1 LIMIT 1';
+  $result = db_query($query, $block_delta);
+  $val = db_fetch_object($result);
+  return $val->enabled == 1 ? true : false;
+};
+
+/**
+ * implementation of hook_nodeapi
+ * inserts the recommendation button at the bottom of a 
+ * piece of content (only if the recommendations block
+ * is enabled)
+ * @param $node
+ * @param $op
+ * @param $a3
+ * @param $a4
+ * @return void
+ */
+function friendconnect_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+  switch ($op) {
+    case 'view':
+        if(is_block_enabled(FRIEND_CONNECT_RECOMMENDATIONS)) {
+          $node->content['recommendations_btn'] = array(
+            '#value' => friendconnect_recommendations_button($node),
+            '#weight' => 1,
+          );
+        }
+      break;
+    case 'insert':
+      case 'update':
+        $title  = t('New '.$node->type. ' created').': '.$node->title;
+        $body = substr($node->body, 0, 30).' ...';
+        post_activity($title, $body);
+      break;
+  }
+};
+
+function friendconnect_comment($a1, $op) {
+  if ($op == 'insert' || $op == 'update') {
+    $nid = $a1['nid'];
+    $node = node_load($nid);
+    $url = url('node/' . 
+            $node->nid, array('absolute'=>true));
+    $title = $a1['author'].' '.t('Commented on') 
+      . ' <a href="'.$url.'">'.$node->title.'</a>';
+    $body = $a1['subject'] .': '. substr($a1['comment'], 0, 20).' ...';
+    post_activity($title, $body);
+  }
+}
+
+
+
+function post_activity($title, $body) {
+  $site_id = variable_get('friendconnect_siteid', '');
+  $fcauth_token = $_COOKIE["fcauth" . $site_id];
+  if(!$fcauth_token) {
+    return false;
+  }
+  include_once realpath(dirname(__FILE__). '/osapi/osapi.php');
+  $provider = new osapiFriendConnectProvider();
+  $auth = new osapiFCAuth($fcauth_token);
+  $osapi = new osapi($provider,$auth);
+  $osapi->setStrictMode(true);
+  $batch = $osapi->newBatch();
+
+  $activity = new osapiActivity(null, null);
+  $activity->setField('title', $title);
+  $activity->setField('body', $body);
+
+  $create_params = array(
+        'userId' => '@me',
+        'groupId' => '@self',
+        'activity' => $activity,
+        'appId' => $site_id
+  );
+  $batch->add($osapi->activities->create($create_params), 'createActivity');
+  try {
+    $a = $batch->execute();
+  } catch ( Exception $e ){
+    
+  }  
+}
+
+function friendconnect_footer($main = 0) {
+  if(variable_get('friendconnect_social_bar_enabled',0)) {
+    return friendconnect_social_bar_content();
+  }
+}
+/**
+ * Implementation of hook_form_alter().
+ */
+function friendconnect_form_alter(&$form, $form_state, $form_id) {
+  if ($form_id == 'comment_form') {
+    if(variable_get('friendconnect_comments_enabled',0)) {
+      $nid = $form['nid']['#value'];
+      $node = node_load($nid);
+      $form = array();
+      $form['friendconnect_comments'] = array(
+        '#type' => 'markup',
+        '#value' => friendconnect_comments_content($node),
+        '#weight' => -2,
+      );
+    }
+   if(variable_get('friendconnect_reviews_enabled',0)) {
+      $nid = $form['nid']['#value'];
+      $node = node_load($nid);
+      $form = variable_get('friendconnect_comments_enabled',0) ? $form : array();
+      $form['friendconnect_reviews'] = array(
+        '#type' => 'markup',
+        '#value' => friendconnect_reviews_content($node),
+        '#weight' => -1,
+      );
+    }
+    $form['friendconnect_displayset'] = array(
+      '#type' => 'fieldset',
+      '#id' => 'friendconnect_displayset',
+      '#title' =>  t('Google Friend Connect'
+      . ' (leave a quick comment)'),
+      '#collapsible' => FALSE,
+      '#weight' => -1,
+    );
+    $form['friendconnect_displayset']['friendconnect_display'] = array(
+      '#type' => 'markup',
+      '#prefix' => '<div id="friendconnect_display">',
+      '#value' => t('loading...'),
+      '#suffix' => '</div>',
+    );
+  }
+  if ($form_id == 'user_login_block'
+    || $form_id == 'user_login') {
+    $form['friendconnect_displayset']['friendconnect_display'] = array(
+      '#type' => 'markup',
+      '#prefix' => '<p>'.t('Google Friend Connect').'</p>' 
+        . '<div id="friendconnect_display">',
+      '#value' => t('loading...'),
+      '#suffix' => '</div>',
+    );
+  }
+};
+
+
+/**
+ * Helper method to format an error message for the user.
+ */
+function friendconnect_custom_error_page(&$form_state, $error_message) {
+  $form['friendconnect_errorset'] = array(
+    '#type' => 'fieldset',
+    '#title' => '<b>' . t('Error!') . '</b>',
+    '#collapsible' => FALSE,
+  );
+  $form['friendconnect_errorset']['friendconnect_error'] = array(
+    '#type' => 'markup',
+    '#prefix' => '<div id="friendconnect_error">',
+    '#value' => $error_message,
+    '#suffix' => '</div>',
+  );
+  return $form;
+};
+
+
+/**
+ * Fetch an unique username for the given friendconnect id.
+ */
+function friendconnect_local_user($fcid, $fcname) {
+  // if previously registered, reuse local account
+  $query = "SELECT uid FROM {friendconnect} WHERE fcid = '%s' LIMIT 1";
+  $result = db_query($query, $fcid);
+  $uid = '';
+  while ($val = db_fetch_object($result)) $uid = $val->uid;
+  if ($uid != '') {
+    $query = 'SELECT name FROM {users} WHERE uid = %d LIMIT 1';
+    $result = db_query($query, $uid);
+    $uname = '';
+    while ($val = db_fetch_object($result)) $uname = $val->name;
+    return $uname;  // this should be the valid mapped user name
+  }
+
+  // create unique username for new visitor 
+  //   (no atomicity guarantees whatsoever)
+  $new_name = str_replace(' ', '', $fcname);
+  $query = "SELECT name FROM {users} WHERE name LIKE '%s%%'";
+  $result = db_query($query, $new_name);
+  $existing_names[] = 'googlefriendconnect';  // reserved name :)
+  while ($val = db_fetch_object($result)) $existing_names[] = $val->name;
+  $uname = $new_name;
+  $counter = 0;
+  while (in_array($uname, $existing_names)) {
+    $counter = $counter + 1;
+    $uname = $new_name . '_' . $counter;
+  }
+  return $uname;
+};
+
+
+/**
+ * Register the unique username for the given friendconnect id.
+ */
+function friendconnect_register_user($fcid, $uname) {
+  // let us try logging in the user now ..
+  if (user_external_login_register($uname, 'friendconnect') != NULL) {
+    $error = '<p>' . t('Auto-login as user').' \'' . $uname
+    . '\' '. t('failed!'). t('Please try again later..'). '</p>';
+    return drupal_get_form('friendconnect_custom_error_page', $error);
+  }
+
+  // register new username with friend connect id
+  global $user;
+  $query = "SELECT uid FROM {friendconnect} WHERE fcid='%s' LIMIT 1";
+  $result = db_query($query, $fcid);
+  $exists = 0;
+  while ($val = db_fetch_object($result)) $exists = 1;
+  if ($exists == 0) {
+    $query = "INSERT INTO {friendconnect} (fcid, uid, creation_time)"
+    . " VALUES('%s', %d, NOW())";
+    $result = db_query($query, $fcid, $user->uid);
+  }
+  return 0;  // all okay indicator
+};
+
+
+/**
+ * Update the profile image for the user.
+ */
+function friendconnect_local_image($uid, $image) {
+  $result = drupal_http_request($image);
+  if ($result->code == 200 && $result->headers['Content-Type'] == 'image/png') {
+    $dst = file_directory_path();
+    if (variable_get('user_pictures_path', ''))
+    $dst .= '/' . variable_get('user_pictures_path', '');
+    $filename = 'fc_' . $uid . '.png';
+    $dst .= '/' . $filename;
+    $status = file_save_data($result->data, $dst, FILE_EXISTS_REPLACE);
+
+    // ignore if image fetch/save fails, we can try again during next login
+    if ($status != '0') {
+      $query = 'UPDATE {users} SET picture="%s" WHERE uid=%d';
+      $queryResult = db_query($query, $status, $uid);
+    }
+  }
+};
+
+
+/**
+ * Local account login, create account if it does not exist.
+ */
+function friendconnect_join() {
+  
+  $message = t('Id') .': @fcid <br/>' . 
+    t('Name:') . ': @fcname <br/>' .
+    t('Image') . ': @fcimage <br/>' . 
+    t('To') . ': @fcto <br/>';
+
+  $vars = array(
+    '@fcid' => $_GET['fcid'],
+    '@fcname' => $_GET['fcname'],
+    '@fcimage' => $_GET['fcimage'],
+    '@fcto' => $_GET['fcto']
+  );
+  watchdog('friendconnect', $message, $vars, WATCHDOG_DEBUG);
+  global $user;
+  
+  // if already logged in, sorry we cannot proceed!
+  if ($user->uid != 0) {
+    $error = '<p>' . t('You are already logged in to this site!') . '</p>';
+    $error .= '<p>' . t(' We currently support only auto-creation of new'
+    . ' accounts.') . '</p>' . '<p>' . t('Linking existing accounts to Google'
+    . ' Friend Connect is not supported at this time :(') . '</p>';
+    return drupal_get_form('friendconnect_custom_error_page',$error);
+  }
+  
+  // we need 'id' and 'name' always!
+  if (!isset($_GET['fcid']) || !isset($_GET['fcname'])) {
+    $error = '<p>' . t('Required arguments (id, name) not provided.') . '</p>';
+    $error .= '<p>' . t('Please ping the site administrator for help!') . '</p>';
+    return drupal_get_form('friendconnect_custom_error_page', $error);
+  }
+
+  $site_id = variable_get('friendconnect_siteid', '');
+  $fcauth_token = $_COOKIE["fcauth" . $site_id];
+  
+  if(!$fcauth_token) {
+    $error = '<p>' . t('An error occurred.') . '</p>';
+    $error .= '<p>' . t('Please ping the site administrator for help!') . '</p>';
+    return drupal_get_form('friendconnect_custom_error_page',$error);
+  }
+  
+  include_once realpath(dirname(__FILE__). '/osapi/osapi.php');
+  $provider = new osapiFriendConnectProvider();
+  $auth = new osapiFCAuth($fcauth_token);
+  $osapi = new osapi($provider,$auth);
+  $osapi->setStrictMode(true);
+  $batch = $osapi->newBatch();
+
+  $profile_fields = array('id' , 'name', 'thumbnailUrl', 'profileUrl');
+  
+  $self_request_params = array(
+    'userId' => '@viewer',            // Person we are fetching.
+    'groupId' => '@self',             // @self for one person.
+    'fields' => $profile_fields // Which profile fields to request.
+  );
+  $batch->add($osapi->people->get($self_request_params), 'viewer');
+  try {
+    $a = $batch->execute();
+    $viewer = $a['viewer'];
+   
+    if(!$viewer instanceof osapiPerson || $viewer->id != $_GET['fcid']) {
+      $error = '<p>'.t('Invalid FC user').'</p>';
+      $error .= '<p>' . t('Please ping the site administrator for help!') . '</p>';
+      return drupal_get_form('friendconnect_custom_error_page',$error);
+    }
+    
+  } catch ( Exception $e ){
+    $error = '<p>' . t($e->getMessage()) . '</p>';
+    $error .= '<p>' . t('Please ping the site administrator for help!') . '</p>';
+    return drupal_get_form('friendconnect_custom_error_page',$error);
+  }
+
+  // default return to home page
+  if (!isset($_GET['fcto'])) $_GET['fcto'] = url('/');
+
+  // login the old/new visitor into the local site
+  $uname = friendconnect_local_user($viewer->id, $viewer->displayName);
+  $status = friendconnect_register_user($viewer->id, $uname);
+  if ($status != 0) return $status;
+
+  // update visitor profile image
+  friendconnect_local_image($user->uid, $viewer->thumbnailUrl);
+
+  // take the user back to the original page
+  drupal_goto($_GET['fcto']);
+};
+/**
+ * implementation of hook_block()
+ */
+function friendconnect_block($op = 'list', $delta = 0, $edit = array()) {
+  
+  // The $op parameter determines what 
+  // piece of information is being requested.
+  switch ($op) {
+    case 'list':
+      // members
+      $blocks[FRIEND_CONNECT_MEMBERS] = array(
+        'info' => t('Friend Connect Members'),
+      );
+      $blocks[FRIEND_CONNECT_RECOMMENDATIONS] = array(
+        'info' => t('Friend Connect Recommendations'),
+      );
+      $blocks[FRIEND_CONNECT_GLOBAL_COMMENTS] = array(
+        'info' => t('Friend Connect Global Comments'),
+      );
+      $blocks[FRIEND_CONNECT_POLLS] = array(
+        'info' => t('Friend Connect Polls'),
+      );
+      $blocks[FRIEND_CONNECT_NEWSLETTER] = array(
+        'info' => t('Friend Connect Newsletters'),
+      );
+      $blocks[FRIEND_CONNECT_FEATURED_CONTENT] = array(
+        'info' => t('Friend Connect Featured Content'),
+      );
+      $blocks[FRIEND_CONNECT_ADENSE] = array(
+        'info' => t('Friend Connect Adsense'),
+      );
+      $blocks[FRIEND_CONNECT_ACTIVITIES] = array(
+        'info' => t('Friend Connect Activities'),
+      );
+      return $blocks;
+    case 'configure':
+      $form = array();
+
+      // login config
+      switch ($delta) {
+        case FRIEND_CONNECT_MEMBERS:
+          $form['friendconnect_members_rows'] = array(
+            '#type' => 'textfield',
+            '#title' => t('Rows per page'),
+            '#size' => 2,
+            '#description' => t('Amount of rows...'),
+            '#default_value' => variable_get(
+              'friendconnect_members_rows',  4),
+          );
+          break;
+        case FRIEND_CONNECT_RECOMMENDATIONS:
+          $form['friendconnect_recommendations_rows'] = array(
+            '#type' => 'textfield',
+            '#title' => t('Rows per page'),
+            '#size' => 2,
+            '#description' => t('Amount of rows...'),
+            '#default_value' => variable_get(
+              'friendconnect_recommendations_rows',  4),
+          );
+          $form['friendconnect_recommendations_header'] = array(
+            '#type' => 'textfield',
+            '#title' => t('Header Text'),
+            '#size' => 60,
+            '#description' => t('Text displayed on top of the gadget'),
+            '#default_value' => variable_get(
+              'friendconnect_recommendations_header',  
+          t('Recommended pages')),
+          );
+          $form['friendconnect_recommendations_btntxt'] = array(
+            '#type' => 'textfield',
+            '#title' => t('Button Text'),
+            '#size' => 30,
+            '#description' => t('Text displayed in the recommendation button'),
+            '#default_value' => variable_get(
+              'friendconnect_recommendations_btntxt',  
+              t('Recommend it!')),
+          );
+          break;
+        case FRIEND_CONNECT_GLOBAL_COMMENTS:
+          $form['friendconnect_gl_comments_default_txt'] = array(
+          '#type' => 'textfield',
+            '#title' => t('Default Text'),
+            '#size' => 60,
+            '#description' => t('Start with this text in the comments area'),
+            '#default_value' => variable_get(
+              'friendconnect_gl_comments_default_txt',  
+          t('Enter your comment here')),
+          );
+          $form['friendconnect_gl_comments_header'] = array(
+          '#type' => 'textfield',
+            '#title' => t('Comments header'),
+            '#size' => 60,
+            '#description' => t('Display this text on top of the gadget'),
+            '#default_value' => variable_get(
+              'friendconnect_gl_comments_header',  
+          t('Enter your comment here')),
+          );
+          $form['friendconnect_gl_anon_comments'] = array(
+            '#type' => 'checkbox',
+            '#default_value' => variable_get('friendconnect_gl_anon_comments', 0), 
+            '#title' => t('Allow anonymous posts.'),
+          );
+          $form['friendconnect_gl_allow_youtube'] = array(
+            '#type' => 'checkbox',
+            '#default_value' => variable_get('friendconnect_gl_allow_youtube', 0), 
+            '#title' => t('Allow visitors to post YouTube links.'),
+          );
+          $form['friendconnect_gl_number_rows'] = array(
+            '#type' => 'textfield',
+            '#title' => t('Number of posts to show'),
+            '#size' => 2,
+            '#default_value' => variable_get(
+              'friendconnect_gl_number_rows', 5),
+          );
+          break;
+        case FRIEND_CONNECT_POLLS:
+          break;
+        case FRIEND_CONNECT_FEATURED_CONTENT:
+          $form['friendconnect_featured_content_title'] = array(
+            '#type' => 'textfield',
+            '#title' => t('Header Text'),
+            '#size' => 60,
+            '#description' => t('Header title'),
+            '#default_value' => variable_get(
+              'friendconnect_featured_content_title',  ''),
+          );
+          break;
+        case FRIEND_CONNECT_NEWSLETTER:
+          $form['friendconnect_newsletter_headline'] = array(
+            '#type' => 'textfield',
+            '#title' => t('Headline text'),
+            '#size' => 60,
+            '#description' => t('Site newsletter sign up title. ' . 
+              'ie: "Sign up for our newsletter!"'),
+            '#default_value' => variable_get(
+              'friendconnect_newsletter_headline',  
+                'Sign up for our newsletter!')
+          );
+          $form['friendconnect_newsletter_std_txt'] = array(
+            '#type' => 'textfield',
+            '#title' => t('Headline text'),
+            '#size' => 60,
+            '#description' => t('Site newsletter sign up ' . 
+              'standard text"'),
+            '#default_value' => variable_get(
+              'friendconnect_newsletter_std_txt',  
+                'Get email updates featuring our sites latest content!')
+          );
+        case FRIEND_CONNECT_ADENSE :
+          $form['friendconnect_adsense_client'] = array(
+            '#type' => 'textfield',
+            '#title' => t('Google Ad Client'),
+            '#size' => 60,
+            '#description' => t('ca-pub-XXXXXXXXXXXXXXX identifier ' 
+             . 'from your adsense account'),
+            '#default_value' => variable_get(
+              'friendconnect_adsense_client',  
+                '')
+          );
+          $form['friendconnect_adsense_host'] = array(
+            '#type' => 'textfield',
+            '#title' => t('Google Ad Host'),
+            '#size' => 60,
+            '#description' => t('pub-XXXXXXXXXXXXXXX identifier ' 
+              . 'from your adsense host'),
+            '#default_value' => variable_get(
+              'friendconnect_adsense_host',  
+                '')
+          );
+          $form['friendconnect_adsense_slot'] = array(
+            '#type' => 'textfield',
+            '#title' => t('Google Ad Slot'),
+            '#size' => 60,
+            '#description' => t('Ad slot identifier ' 
+              . 'from your adsense campaign'),
+            '#default_value' => variable_get(
+              'friendconnect_adsense_slot',  
+                '')
+          );
+          $form['friendconnect_adsense_test_mode'] = array(
+            '#type' => 'select',
+            '#title' => t('Ads in test mode'),
+            '#options' => array(0=>'No',1=>'Yes'),
+            '#description' => t('Select yes to test your ads'),
+            '#default_value' => variable_get(
+              'friendconnect_adsense_test_mode',  
+                0)
+          );
+          $options = drupal_map_assoc(array('728x90','468x60','300x250','160x600','120x600',
+            '336x280','250x250','234x60','180x150','200x200','125x125',
+            '120x240'));
+          
+          $form['friendconnect_adsense_adsize'] = array(
+            '#type' => 'select',
+            '#title' => t('Ad Size'),
+            '#options'=>$options,
+            '#description' => t('size of the add'),
+            '#default_value' => variable_get(
+              'friendconnect_adsense_adsize',  
+               '')
+          );
+          break;
+        case FRIEND_CONNECT_ACTIVITIES :
+          $options = array('SITE'=>t('This site'), 
+            'FRIENDS'=>t('Friends on all Friend Connect sites.'));
+          $form['friendconnect_activities_scope'] = array(
+            '#type' => 'select',
+            '#title' => t('Scope'),
+            '#options'=>$options,
+            '#description' => t('This gadget can display '
+            .'activities relating to your site,'.
+            ' or activities relating to your visitor\'s'
+            .' friends. Choose which set to show.'),
+            '#default_value' => variable_get(
+              'friendconnect_activities_scope',  
+               ''));
+          break;
+      }
+      return $form;
+    case 'save':
+      switch ($delta) {
+        case FRIEND_CONNECT_MEMBERS:
+          variable_set('friendconnect_members_rows',
+          $edit['friendconnect_members_rows']);
+          break;
+        case FRIEND_CONNECT_RECOMMENDATIONS:
+          variable_set('friendconnect_recommendations_rows',
+          $edit['friendconnect_recommendations_rows']);
+          variable_set('friendconnect_recommendations_header',
+          $edit['friendconnect_recommendations_header']);
+          variable_set('friendconnect_recommendations_btntxt',
+          $edit['friendconnect_recommendations_btntxt']);
+          break;
+        case FRIEND_CONNECT_GLOBAL_COMMENTS:
+          variable_set('friendconnect_gl_comments_default_txt',
+          $edit['friendconnect_gl_comments_default_txt']);
+          variable_set('friendconnect_gl_comments_header',
+          $edit['friendconnect_gl_comments_header']);
+          variable_set('friendconnect_gl_anon_comments',
+          $edit['friendconnect_gl_anon_comments']);
+          variable_set('friendconnect_gl_allow_youtube',
+          $edit['friendconnect_gl_allow_youtube']);
+          variable_set('friendconnect_gl_number_rows',
+          $edit['friendconnect_gl_number_rows']);
+          break;
+        case FRIEND_CONNECT_NEWSLETTER:
+          variable_set('friendconnect_newsletter_headline',
+          $edit['friendconnect_newsletter_headline']);
+          variable_set('friendconnect_newsletter_std_txt',
+          $edit['friendconnect_newsletter_std_txt']);
+          break;
+        case FRIEND_CONNECT_FEATURED_CONTENT:
+          variable_set('friendconnect_featured_content_title',
+          $edit['friendconnect_featured_content_title']);
+          break;
+        case FRIEND_CONNECT_ADENSE : 
+          variable_set('friendconnect_adsense_client',
+          $edit['friendconnect_adsense_client']);
+          variable_set('friendconnect_adsense_host',
+          $edit['friendconnect_adsense_host']);
+          variable_set('friendconnect_adsense_adsize',
+          $edit['friendconnect_adsense_adsize']);
+          variable_set('friendconnect_adsense_slot',
+          $edit['friendconnect_adsense_slot']);
+          variable_set('friendconnect_adsense_test_mode',
+          $edit['friendconnect_adsense_test_mode']);
+          break;
+        case FRIEND_CONNECT_ACTIVITIES:
+          variable_set('friendconnect_activities_scope',
+          $edit['friendconnect_activities_scope']);
+          break;
+      }
+      return;
+
+    case 'view':
+    default:
+      switch ($delta) {
+        case FRIEND_CONNECT_MEMBERS:
+          $block['content'] = friendconnect_members_content();
+          break;
+        case FRIEND_CONNECT_RECOMMENDATIONS:
+          $block['content'] = friendconnect_recommendations_content();
+          break;
+        case FRIEND_CONNECT_GLOBAL_COMMENTS:
+          $block['content'] = friendconnect_global_comments_content();
+          break;
+        case FRIEND_CONNECT_POLLS:
+          $block['content'] = friendconnect_polls_content();
+          break;
+        case FRIEND_CONNECT_NEWSLETTER:
+          $block['content'] = friendconnect_newsletter_content();
+          break;
+        case FRIEND_CONNECT_FEATURED_CONTENT:
+          $block['content'] = friendconnect_featured_content_content();
+          break;
+        case FRIEND_CONNECT_ADENSE:
+          $block['content'] = friendconnect_adsense_content();
+          break;
+        case FRIEND_CONNECT_ACTIVITIES:
+          $block['content'] = friendconnect_activities_content();
+      }
+      return $block;
+  }
+};
+/**
+ * builds the global comments gadget
+ * @return string Global comments gadget content
+ */
+function friendconnect_global_comments_content() {
+  $features = array('comment');
+  if(variable_get('friendconnect_gl_allow_youtube',0)){
+    array_unshift($features, 'video');
+  }
+  return '<div id="friend_connect_global_comments" style="min-width: 215px; width: 100%;"></div>
+    <script type="text/javascript">
+      var GFC_glb_comments_skin = '.friendconnect_build_skin().';
+     GFC_glb_comments_skin[\'DEFAULT_COMMENT_TEXT\'] = \'' .
+      variable_get('friendconnect_gl_comments_default_txt',
+        t('Enter your comment here')). '\';
+     GFC_glb_comments_skin[\'HEADER_TEXT\'] = \'' . 
+      variable_get('friendconnect_gl_comments_header',t('Comments')). '\';
+     GFC_glb_comments_skin[\'POSTS_PER_PAGE\'] = \'' . 
+      variable_get('friendconnect_gl_number_rows',5). '\';
+     google.friendconnect.container.renderWallGadget(
+     { id: \'friend_connect_global_comments\',
+       site: \''.variable_get('friendconnect_siteid','').'\',
+       \'view-params\':{"disableMinMax":"true","scope":"SITE","features":"'.
+        implode(',',$features).'","startMaximized":"true",
+        "allowAnonymousPost":"' . 
+        (variable_get('friendconnect_gl_anon_comments', 
+          false) ? 'true':'false').'"}
+     },
+      GFC_glb_comments_skin);
+    </script>';
+};
+
+/**
+ * builds the fc comments gadget
+ * @param $node
+ * @return string comments gadget content
+ */
+function friendconnect_comments_content($node) {
+  $features = array('comment');
+  if(variable_get('friendconnect_allow_youtube',0)){
+    array_unshift($features, 'video');
+  }
+  return '<div id="friend_connect_comments'. 
+    $node->nid. '"></div>
+    <script type="text/javascript">
+      var GFC_comments_skin = '.friendconnect_build_skin().';
+     GFC_comments_skin[\'DEFAULT_COMMENT_TEXT\'] = \'' .
+      variable_get('friendconnect_comments_default_txt',
+        t('Enter your comment here')). '\';
+     GFC_comments_skin[\'HEADER_TEXT\'] = \'' . 
+      variable_get('friendconnect_comments_header',t('Comments')). '\';
+     GFC_comments_skin[\'POSTS_PER_PAGE\'] = \'' . 
+      variable_get('friendconnect_number_rows',5). '\';
+     google.friendconnect.container.renderWallGadget(
+     { id: \'friend_connect_comments'.$node->nid.'\',
+       site: \''.variable_get('friendconnect_siteid','').'\',
+       \'view-params\':{"disableMinMax":"true","scope":"ID","features":"'.
+        implode(',',$features).'","startMaximized":"true",
+        "allowAnonymousPost":"' . 
+        (variable_get('friendconnect_anon_comments', 
+          false) ? 'true':'false').'","docId":"node_'.$node->nid.'"}
+     },
+      GFC_comments_skin);
+    </script>';
+};
+
+/**
+ * builds the fc reviews gadget
+ * @param $node
+ * @return string reviews gadget content
+ */
+function friendconnect_reviews_content($node) {
+  return '<div id="friend_connect_reviews'. 
+    $node->nid. '" ></div>
+    <script type="text/javascript">
+      var GFC_reviews_skin = '.friendconnect_build_skin().';
+     GFC_reviews_skin[\'DEFAULT_COMMENT_TEXT\'] = \'' .
+      variable_get('friendconnect_reviews_default_txt',
+        t('Enter your review here')). '\';
+     GFC_reviews_skin[\'HEADER_TEXT\'] = \'' . 
+      variable_get('friendconnect_reviews_header',t('Reviews')). '\';
+     GFC_reviews_skin[\'POSTS_PER_PAGE\'] = \'' . 
+      variable_get('friendconnect_number_rows',5). '\';
+     google.friendconnect.container.renderReviewGadget(
+     { id: \'friend_connect_reviews'.$node->nid.'\',
+       site: \''.variable_get('friendconnect_siteid','').'\',
+       \'view-params\':{"disableMinMax":"true","scope":"ID",' . 
+       '"startMaximized":"true","allowAnonymousPost":"' . 
+        (variable_get('friendconnect_anon_reviews', 
+          false) ? 'true':'false').'","docId":"node_'.$node->nid.'"}
+     },
+      GFC_reviews_skin);
+    </script>';
+};
+/**
+ * builds the recommendatios gadget content
+ * @return string 
+ */
+function friendconnect_recommendations_content() {
+  $gadget_url ='http://www.google.com/friendconnect/' 
+    . 'gadgets/recommended_pages.xml';
+  return '<div id="friend_connect_recommendations" '
+  	  . 'style="width: 100%;"></div>
+      <script type="text/javascript">
+      var GFC_recommendations_skin = '.friendconnect_build_skin().';
+      GFC_recommendations_skin[\'HEADER_TEXT\'] = \'' 
+      . variable_get('friendconnect_recommendations_header','').'\';
+      GFC_recommendations_skin[\'RECOMMENDATIONS_PER_PAGE\'] = \'' 
+      . variable_get('friendconnect_recommendations_rows','') . '\';
+      google.friendconnect.container.renderOpenSocialGadget(
+       { id: \'friend_connect_recommendations\',
+         url:\''.$gadget_url.'\',
+         site: \''.variable_get('friendconnect_siteid','').'\',
+         \'view-params\':{"docId":"recommendedPages"}
+       },
+        GFC_recommendations_skin);
+      </script>';
+};
+/**
+ * builds the recommendation button content
+ * @param $node current node
+ * @return string
+ */
+function friendconnect_recommendations_button($node) {
+  $gadget_url =
+    'http://www.google.com/friendconnect/gadgets/recommended_pages.xml';
+  return '
+      <div id="friend_connect_recommendations_btn_'. $node->nid 
+      .'" style="width:100%;">
+      </div>
+      <script type="text/javascript">
+      var GFC_recommendations_button_skin = '.friendconnect_build_skin().';
+      GFC_recommendations_button_skin[\'HEIGHT\'] = \'21\';
+      GFC_recommendations_button_skin[\'BUTTON_STYLE\'] = \'compact\';
+      GFC_recommendations_button_skin[\'BUTTON_TEXT\'] = \''
+      .variable_get('friendconnect_recommendations_btntxt','').'\';
+      GFC_recommendations_button_skin[\'BUTTON_ICON\'] = \'default\';
+      google.friendconnect.container.renderOpenSocialGadget(
+       { id: \'friend_connect_recommendations_btn_'.$node->nid.'\',
+         url:\''.$gadget_url.'\',
+         height: 21,
+         site: \''.variable_get('friendconnect_siteid','').'\',
+         \'view-params\':{"pageUrl":"'.url('node/' . 
+            $node->nid, array('absolute'=>true)).'",
+           "pageTitle":\''.$node->title.'\',
+           "docId":"recommendedPages"}
+       },
+        GFC_recommendations_button_skin);
+      </script>';
+};
+/**
+ * builds the members gadget content
+ * @return string
+ */
+function friendconnect_members_content() {
+  return '<div id="friendconnect_members"' .
+      ' style="width: 100%;">Loading..</div>' .
+      '<script type="text/javascript">
+      var GFC_members_skin = '.friendconnect_build_skin().';
+      GFC_members_skin[\'NUMBER_ROWS\'] = "' . 
+  variable_get('friendconnect_members_rows',  4).'";
+      google.friendconnect.container.renderMembersGadget(
+       { id: \'friendconnect_members\',
+         site: \''.variable_get('friendconnect_siteid', '').'\' },
+        GFC_members_skin);
+      </script>';
+};
+/**
+ * builds the social bar gadget content
+ * @return string
+ */
+function friendconnect_social_bar_content() {
+   return '
+    <div id="friendconnect_social_bar"></div>
+    <!-- Render the gadget into a div. -->
+    <script type="text/javascript">
+    var GFC_social_bar_skin = '.friendconnect_build_skin().';
+    GFC_social_bar_skin[\'POSITION\'] = \'' . 
+     (variable_get('friendconnect_social_bar_pos', 0) ? 'bottom':'top'). '\';
+    google.friendconnect.container.renderSocialBar(
+     { id: \'friendconnect_social_bar\',
+       site: \''.variable_get('friendconnect_siteid', '').'\',
+       \'view-params\':{"showWall":"false"}
+     },
+      GFC_social_bar_skin);
+    </script>';
+};
+
+function friendconnect_polls_content() {
+  return '
+    <div id="friendconnect_polls" style="width: 100%;"></div>
+    <!-- Render the gadget into a div. -->
+    <script type="text/javascript">
+    var GFC_polls_skin = '.friendconnect_build_skin().';
+     google.friendconnect.container.renderOpenSocialGadget(
+     { id: \'friendconnect_polls\',
+       url:\'http://www.google.com/friendconnect/gadgets/poll.xml\',
+       site: \''.variable_get('friendconnect_siteid', '').'\' },
+      GFC_polls_skin);
+    </script>';
+}
+
+function friendconnect_newsletter_content() {
+  return '
+    <div id="friendconnect_newsletter"  style="width: 100%;"></div>
+    <!-- Render the gadget into a div. -->
+    <script type="text/javascript">
+    var GFC_newsletter_skin = '.friendconnect_build_skin().';
+    google.friendconnect.container.renderOpenSocialGadget(
+     { id: \'friendconnect_newsletter\',
+       url:\'http://www.google.com/friendconnect/' 
+        . 'gadgets/newsletterSubscribe.xml\',
+       site: \''.variable_get('friendconnect_siteid', '').'\',
+       \'view-params\':{},
+       \'prefs\':{
+         "newsletterHeadlineText":"' 
+            . variable_get('friendconnect_newsletter_headline', '').'",
+         "newsletterStandardText":"'
+            . variable_get('friendconnect_newsletter_std_txt', '').'"}
+   },
+    GFC_newsletter_skin);
+      </script>';
+}
+
+function friendconnect_featured_content_content() {
+   return '
+    <div id="friendconnect_featured_content"  style="width: 100%;"></div>
+    <!-- Render the gadget into a div. -->
+    <script type="text/javascript">
+    var GFC_featured_skin = '.friendconnect_build_skin().';
+    google.friendconnect.container.renderOpenSocialGadget(
+     { id: \'friendconnect_featured_content\',
+       url:\'http://www.google.com/friendconnect/' 
+        . 'gadgets/content_reveal.xml\',
+       site: \''.variable_get('friendconnect_siteid', '').'\',
+       \'prefs\':{
+         "showHeaderTitle":"1",
+         "customSiteRestriction":"",
+         "customHeaderTitle":"' 
+            . variable_get('friendconnect_featured_content_title', '').'"}},
+        GFC_featured_skin);
+      </script>';
+}
+
+function friendconnect_adsense_content() {
+  $format = variable_get('friendconnect_adsense_adsize', '');
+  $size = explode('x', $format);
+  $width = (int)$size[0]+18;
+  $height = (int)$size[1]+18;
+  $slot = variable_get('friendconnect_adsense_slot', '');
+  return '<div id="friendconnect_adsense"  style="width: '.$width.'px;"></div>
+    <!-- Render the gadget into a div. -->
+    <script type="text/javascript">
+    var GFC_adsense_skin = '.friendconnect_build_skin().';
+    GFC_adsense_skin[\'HEIGHT\'] = "'.$height.'";
+    google.friendconnect.container.renderAdsGadget(
+ { id: \'friendconnect_adsense\',
+   height: \''.$height.'\', 
+   site: \''.variable_get('friendconnect_siteid', '').'\',
+   \'prefs\':{"google_ad_client":"' 
+    . variable_get('friendconnect_adsense_client', '')
+   . '","google_ad_host":"' 
+     . variable_get('friendconnect_adsense_host', '') 
+   . '", ' . 
+   ($slot != '' ? '"google_ad_slot":"' . $slot . '",':'') .
+    '"google_ad_format":"' 
+     . $format . '","google_adtest":"'
+     . (variable_get('friendconnect_adsense_host', 0)==1 ? 'true':'false').'"}
+ },GFC_adsense_skin);</script>';
+}
+
+function friendconnect_activities_content() {
+  $scope =  variable_get('friendconnect_activities_scope', 'SITE');
+  return '<div id="friendconnect_activities"  style="width: 100%;"></div>
+    <!-- Render the gadget into a div. -->
+    <script type="text/javascript">
+    var GFC_act_skin = '.friendconnect_build_skin().';
+    google.friendconnect.container.renderOpenSocialGadget(
+     { id: "friendconnect_activities",
+       url:\'http://www.google.com/friendconnect/gadgets/activities.xml\',
+       height: 400,
+       site: \''.variable_get('friendconnect_siteid', '').'\',
+       \'view-params\':{"scope":"'.$scope.'"}
+     },GFC_act_skin);</script>';
+}
